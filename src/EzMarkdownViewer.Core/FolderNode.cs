@@ -1,3 +1,5 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace EzMarkdownViewer.Core;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace EzMarkdownViewer.Core;
 /// all immediate subfolders and immediate <c>.md</c> files, sorted
 /// folders-first then alphabetical (case-insensitive).
 /// </summary>
-public sealed class FolderNode : DirectoryTreeNode
+public sealed partial class FolderNode : DirectoryTreeNode
 {
     private const string MarkdownSearchPattern = "*.md";
 
@@ -25,11 +27,21 @@ public sealed class FolderNode : DirectoryTreeNode
     public IReadOnlyList<DirectoryTreeNode> Children => _children ??= LoadChildren();
 
     /// <summary>
+    /// Children if they have already been loaded, or <c>null</c> otherwise.
+    /// Callers traversing the tree for bookkeeping (e.g. snapshotting
+    /// expansion state) use this to avoid triggering disk reads on folders
+    /// the user has never opened.
+    /// </summary>
+    public IReadOnlyList<DirectoryTreeNode>? LoadedChildren => _children;
+
+    /// <summary>
     /// Whether this folder is currently expanded in the UI tree. Bound
     /// two-way to <c>TreeViewItem.IsExpanded</c> so persisted expanded-folder
-    /// state can be inspected on shutdown.
+    /// state can be inspected on shutdown, and so the filter logic can
+    /// programmatically expand ancestors of matches.
     /// </summary>
-    public bool IsExpanded { get; set; }
+    [ObservableProperty]
+    private bool _isExpanded;
 
     private IReadOnlyList<DirectoryTreeNode> LoadChildren()
     {

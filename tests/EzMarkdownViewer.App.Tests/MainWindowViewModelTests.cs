@@ -1030,4 +1030,216 @@ public class MainWindowViewModelTests
         vm.CanGoBack.Should().BeFalse();
         vm.CanGoForward.Should().BeFalse();
     }
+
+    private static IFileSystem CreateFilterTreeFileSystem()
+    {
+        // /notes
+        //   /design
+        //     architecture.md
+        //     readme.md
+        //   /random
+        //     misc.md
+        //   notes.md
+        const string folder = "C:\\notes";
+        const string design = "C:\\notes\\design";
+        const string random = "C:\\notes\\random";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(new[] { design, random });
+        fs.EnumerateDirectories(design).Returns(Array.Empty<string>());
+        fs.EnumerateDirectories(random).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
+            .Returns(new[] { "C:\\notes\\notes.md" });
+        fs.EnumerateFiles(design, Arg.Any<string>(), Arg.Any<SearchOption>())
+            .Returns(new[] { "C:\\notes\\design\\architecture.md", "C:\\notes\\design\\readme.md" });
+        fs.EnumerateFiles(random, Arg.Any<string>(), Arg.Any<SearchOption>())
+            .Returns(new[] { "C:\\notes\\random\\misc.md" });
+        return fs;
+    }
+
+    [Fact]
+    public void FilterText_DefaultsToEmpty()
+    {
+        var vm = CreateViewModel();
+
+        vm.FilterText.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Filter_WhenEmpty_LeavesAllNodesVisible()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+
+        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        vm.RootNode.IsVisible.Should().BeTrue();
+        design.IsVisible.Should().BeTrue();
+        design.Children.All(c => c.IsVisible).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Filter_HidesNodesThatDoNotMatchSubstring()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+
+        vm.FilterText = "architecture";
+
+        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        var random = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
+        var notes = vm.RootNode.Children.OfType<MarkdownFileNode>().Single(f => f.DisplayName == "notes");
+        design.IsVisible.Should().BeTrue();
+        random.IsVisible.Should().BeFalse();
+        notes.IsVisible.Should().BeFalse();
+        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture").IsVisible.Should().BeTrue();
+        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "readme").IsVisible.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Filter_ExpandsAncestorsOfMatches()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+        vm.RootNode!.IsExpanded.Should().BeFalse();
+
+        vm.FilterText = "architecture";
+
+        vm.RootNode.IsExpanded.Should().BeTrue();
+        var design = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        design.IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Filter_IsCaseInsensitive()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+
+        vm.FilterText = "ARCH";
+
+        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture").IsVisible.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Filter_WhitespaceOnly_TreatedAsEmpty()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+        vm.FilterText = "architecture";
+
+        vm.FilterText = "   ";
+
+        vm.RootNode!.Children.All(c => c.IsVisible).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Filter_FolderNameMatch_MakesFolderVisibleWithoutForcingExpansion()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+
+        vm.FilterText = "design";
+
+        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        design.IsVisible.Should().BeTrue();
+        design.IsExpanded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Filter_Clearing_RestoresVisibilityOnPreviouslyHiddenNodes()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+        vm.FilterText = "architecture";
+        var random = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
+        random.IsVisible.Should().BeFalse();
+
+        vm.FilterText = string.Empty;
+
+        random.IsVisible.Should().BeTrue();
+        random.Children.All(c => c.IsVisible).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Filter_Clearing_RestoresPreFilterExpansionState()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings
+        {
+            LastFolder = "C:\\notes",
+            ExpandedFolders = new List<string> { "C:\\notes" },
+        });
+        // Pre-filter: root is expanded by the user, child folders are not.
+        vm.RootNode!.IsExpanded.Should().BeTrue();
+        var design = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        var random = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
+        design.IsExpanded.Should().BeFalse();
+        random.IsExpanded.Should().BeFalse();
+
+        vm.FilterText = "architecture";
+        // Filter force-expands ancestors of matches.
+        design.IsExpanded.Should().BeTrue();
+
+        vm.FilterText = string.Empty;
+
+        vm.RootNode.IsExpanded.Should().BeTrue();
+        design.IsExpanded.Should().BeFalse();
+        random.IsExpanded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void OpenFolder_ClearsFilterText()
+    {
+        var picker = Substitute.For<IFolderPicker>();
+        picker.PickFolder().Returns("C:\\other");
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(picker: picker, fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+        vm.FilterText = "architecture";
+
+        vm.OpenFolderCommand.Execute(null);
+
+        vm.FilterText.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TryOpenFromPath_WhenSwappingFolder_ClearsFilterText()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        fs.DirectoryExists("C:\\other").Returns(true);
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+        vm.FilterText = "architecture";
+
+        vm.TryOpenFromPath("C:\\other");
+
+        vm.FilterText.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Refresh_PreservesFilterTextAndReappliesToRebuiltTree()
+    {
+        var fs = CreateFilterTreeFileSystem();
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
+        vm.FilterText = "architecture";
+
+        vm.RefreshCommand.Execute(null);
+
+        vm.FilterText.Should().Be("architecture");
+        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        var random = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
+        design.IsVisible.Should().BeTrue();
+        design.IsExpanded.Should().BeTrue();
+        random.IsVisible.Should().BeFalse();
+    }
 }

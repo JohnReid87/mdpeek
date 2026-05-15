@@ -24,6 +24,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IFileAssociationRegistrar _fileAssociationRegistrar;
     private readonly NavigationHistory _history = new();
     private bool _navigatingHistory;
+    private bool _filterApplied;
+    private Dictionary<string, bool>? _preFilterExpansion;
 
     [ObservableProperty]
     private string _windowTitle = AppName;
@@ -39,6 +41,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private string? _htmlContent;
+
+    [ObservableProperty]
+    private string _filterText = string.Empty;
 
     public MainWindowViewModel(
         IFolderPicker folderPicker,
@@ -80,6 +85,157 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 _history.Visit(file.FullPath);
                 OnHistoryChanged();
+            }
+        }
+    }
+
+    partial void OnFilterTextChanged(string value)
+    {
+        ApplyFilter();
+    }
+
+    partial void OnRootNodeChanged(FolderNode? value)
+    {
+        // A new tree has no filter state to clear — only re-apply the filter
+        // if it is currently non-empty (e.g. after Refresh rebuilds the tree).
+        _filterApplied = false;
+        _preFilterExpansion = null;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (RootNode is null)
+        {
+            return;
+        }
+
+        var filter = FilterText.Trim();
+        if (filter.Length == 0)
+        {
+            if (!_filterApplied)
+            {
+                return;
+            }
+            ClearFilter(RootNode);
+            if (_preFilterExpansion is not null)
+            {
+                RestoreExpansion(RootNode, _preFilterExpansion);
+                _preFilterExpansion = null;
+            }
+            _filterApplied = false;
+            return;
+        }
+
+        // Snapshot the user's manual expansion state the first time a filter
+        // is applied to this tree, so that clearing the filter restores the
+        // tree to how it looked before — instead of leaving every folder the
+        // filter force-expanded permanently open.
+        _preFilterExpansion ??= SnapshotExpansion(RootNode);
+
+        FilterRecursive(RootNode, filter);
+        _filterApplied = true;
+    }
+
+    /// <summary>
+    /// Walks <paramref name="node"/> and its descendants applying
+    /// <paramref name="filter"/>. A node matches if its display name contains
+    /// the filter (case-insensitive); a folder is also visible if any
+    /// descendant matches, and is force-expanded to reveal those matches.
+    /// Returns whether <paramref name="node"/> ended up visible.
+    /// </summary>
+    private static bool FilterRecursive(DirectoryTreeNode node, string filter)
+    {
+        var selfMatches = node.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase);
+
+        if (node is FolderNode folder)
+        {
+            var anyChildVisible = false;
+            foreach (var child in folder.Children)
+            {
+                if (FilterRecursive(child, filter))
+                {
+                    anyChildVisible = true;
+                }
+            }
+
+            folder.IsVisible = selfMatches || anyChildVisible;
+            if (anyChildVisible)
+            {
+                folder.IsExpanded = true;
+            }
+            return folder.IsVisible;
+        }
+
+        node.IsVisible = selfMatches;
+        return selfMatches;
+    }
+
+    /// <summary>
+    /// Restores <see cref="DirectoryTreeNode.IsVisible"/> to <c>true</c> on
+    /// <paramref name="node"/> and any descendants that were previously
+    /// loaded.
+    /// </summary>
+    private static void ClearFilter(DirectoryTreeNode node)
+    {
+        node.IsVisible = true;
+        if (node is FolderNode folder)
+        {
+            foreach (var child in folder.Children)
+            {
+                ClearFilter(child);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Captures the <see cref="FolderNode.IsExpanded"/> state of every
+    /// already-loaded folder under <paramref name="root"/>. Folders the user
+    /// has not yet opened are not enumerated, since they default to
+    /// collapsed and absence from the snapshot is treated as collapsed on
+    /// restore.
+    /// </summary>
+    private static Dictionary<string, bool> SnapshotExpansion(FolderNode root)
+    {
+        var map = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        Walk(root, map);
+        return map;
+
+        static void Walk(FolderNode folder, Dictionary<string, bool> map)
+        {
+            map[folder.FullPath] = folder.IsExpanded;
+            if (folder.LoadedChildren is null)
+            {
+                return;
+            }
+            foreach (var child in folder.LoadedChildren.OfType<FolderNode>())
+            {
+                Walk(child, map);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Restores <see cref="FolderNode.IsExpanded"/> on every loaded folder
+    /// under <paramref name="root"/> from <paramref name="snapshot"/>.
+    /// Folders absent from the snapshot — typically those the filter
+    /// force-loaded — are collapsed back, returning the tree to its
+    /// pre-filter appearance.
+    /// </summary>
+    private static void RestoreExpansion(FolderNode root, Dictionary<string, bool> snapshot)
+    {
+        Walk(root, snapshot);
+
+        static void Walk(FolderNode folder, Dictionary<string, bool> snapshot)
+        {
+            folder.IsExpanded = snapshot.TryGetValue(folder.FullPath, out var wasExpanded) && wasExpanded;
+            if (folder.LoadedChildren is null)
+            {
+                return;
+            }
+            foreach (var child in folder.LoadedChildren.OfType<FolderNode>())
+            {
+                Walk(child, snapshot);
             }
         }
     }
@@ -168,6 +324,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         _history.Clear();
         OnHistoryChanged();
+        FilterText = string.Empty;
 
         var root = new FolderNode(path, _fileSystem);
         RootNode = root;
@@ -232,6 +389,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _history.Clear();
             OnHistoryChanged();
+            FilterText = string.Empty;
 
             var root = new FolderNode(path, _fileSystem);
             RootNode = root;
@@ -253,6 +411,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         _history.Clear();
         OnHistoryChanged();
+        FilterText = string.Empty;
 
         var parentRoot = new FolderNode(parent, _fileSystem);
         RootNode = parentRoot;

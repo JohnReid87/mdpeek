@@ -27,4 +27,12 @@ public class MarkdownFileNodeTests
 
         node.FullPath.Should().Be(path);
     }
+
+    [Fact]
+    public void IsVisible_DefaultsToTrue()
+    {
+        var node = new MarkdownFileNode("C:\\docs\\notes.md");
+
+        node.IsVisible.Should().BeTrue();
+    }
 }

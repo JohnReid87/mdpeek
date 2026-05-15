@@ -97,17 +97,27 @@
                                Visibility="{Binding HasNoFolderOpen, Converter={StaticResource BoolToVisibility}}"
                                Text="No folder open. Use File &#x2192; Open Folder&#x2026; to begin." />
 
-                    <TreeView x:Name="DirectoryTree"
-                              ItemsSource="{Binding Roots}"
-                              BorderThickness="0"
-                              SelectedItemChanged="DirectoryTree_SelectedItemChanged"
-                              Visibility="{Binding HasFolderOpen, Converter={StaticResource BoolToVisibility}}">
-                        <TreeView.ItemContainerStyle>
-                            <Style TargetType="{x:Type TreeViewItem}">
-                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                            </Style>
-                        </TreeView.ItemContainerStyle>
-                    </TreeView>
+                    <DockPanel Visibility="{Binding HasFolderOpen, Converter={StaticResource BoolToVisibility}}">
+                        <TextBox DockPanel.Dock="Top"
+                                 x:Name="FilterBox"
+                                 Margin="4"
+                                 Padding="4,2"
+                                 ToolTip="Filter files and folders (case-insensitive)"
+                                 AutomationProperties.Name="Filter"
+                                 Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TreeView x:Name="DirectoryTree"
+                                  ItemsSource="{Binding Roots}"
+                                  BorderThickness="0"
+                                  SelectedItemChanged="DirectoryTree_SelectedItemChanged">
+                            <TreeView.ItemContainerStyle>
+                                <Style TargetType="{x:Type TreeViewItem}">
+                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                    <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVisibility}}" />
+                                </Style>
+                            </TreeView.ItemContainerStyle>
+                        </TreeView>
+                    </DockPanel>
                 </Grid>
             </Border>
 

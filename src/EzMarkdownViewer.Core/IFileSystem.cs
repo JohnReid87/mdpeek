@@ -18,4 +18,19 @@ public interface IFileSystem
     /// recursively, depending on <paramref name="searchOption"/>.
     /// </summary>
     IEnumerable<string> EnumerateFiles(string path, string searchPattern, SearchOption searchOption);
+
+    /// <summary>
+    /// Returns true if the given path exists and is a regular file.
+    /// </summary>
+    bool FileExists(string path);
+
+    /// <summary>
+    /// Returns the size in bytes of the file at <paramref name="path"/>.
+    /// </summary>
+    long GetFileSizeBytes(string path);
+
+    /// <summary>
+    /// Reads the full text contents of the file at <paramref name="path"/>.
+    /// </summary>
+    string ReadAllText(string path);
 }

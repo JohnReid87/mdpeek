@@ -80,4 +80,27 @@ public class MarkdownRendererTests
 
         result.Should().Contain("type=\"checkbox\"");
     }
+
+    [Fact]
+    public void RenderError_WrapsMessage_InHtmlShellWithEmbeddedStylesheet()
+    {
+        var result = _sut.RenderError("File not found", "It was not there.");
+
+        result.Should().Contain("<!DOCTYPE html>");
+        result.Should().Contain("<style>");
+        result.Should().Contain("--bg: #0d1117");
+        result.Should().Contain("class=\"error\"");
+        result.Should().Contain("File not found");
+        result.Should().Contain("It was not there.");
+    }
+
+    [Fact]
+    public void RenderError_HtmlEncodesUserSuppliedText()
+    {
+        var result = _sut.RenderError("<bad>", "1 < 2 & 3 > 0");
+
+        result.Should().Contain("&lt;bad&gt;");
+        result.Should().Contain("1 &lt; 2 &amp; 3 &gt; 0");
+        result.Should().NotContain("<bad>");
+    }
 }

@@ -29,7 +29,9 @@ public partial class App : Application
     private static void ConfigureServices(IServiceCollection services)
     {
         services.AddSingleton<IFileSystem, FileSystem>();
+        services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();
         services.AddSingleton<IFolderPicker, WpfFolderPicker>();
+        services.AddSingleton<IUserConfirmation, WpfUserConfirmation>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
     }

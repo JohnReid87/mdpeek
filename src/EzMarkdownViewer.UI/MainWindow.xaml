@@ -7,6 +7,9 @@
         Width="1200" Height="800"
         MinWidth="600" MinHeight="400"
         WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource Brush.Bg}"
+        Foreground="{DynamicResource Brush.Fg}"
+        TextOptions.TextFormattingMode="Display"
         Loaded="OnWindowLoaded">
 
     <Window.Resources>
@@ -59,7 +62,10 @@
                 <ColumnDefinition Width="*" MinWidth="240" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" BorderBrush="#444" BorderThickness="0,0,1,0">
+            <Border Grid.Column="0"
+                    Background="{DynamicResource Brush.Bg}"
+                    BorderBrush="{DynamicResource Brush.Border}"
+                    BorderThickness="0,0,1,0">
                 <Grid>
                     <TextBlock Margin="16"
                                TextWrapping="Wrap"
@@ -85,7 +91,6 @@
                           Width="5"
                           HorizontalAlignment="Stretch"
                           VerticalAlignment="Stretch"
-                          Background="Transparent"
                           ShowsPreview="False" />
 
             <Border Grid.Column="2">

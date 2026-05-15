@@ -15,6 +15,12 @@ public partial class AboutWindow : Window
         VersionText.Text = $"Version {version}";
     }
 
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        DarkTitleBar.Apply(this);
+    }
+
     private void RepoLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
         Process.Start(new ProcessStartInfo

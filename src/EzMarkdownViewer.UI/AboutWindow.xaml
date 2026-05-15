@@ -5,7 +5,10 @@
         Width="420" Height="220"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        Background="{DynamicResource Brush.Bg}"
+        Foreground="{DynamicResource Brush.Fg}"
+        TextOptions.TextFormattingMode="Display">
     <Grid Margin="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

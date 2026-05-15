@@ -37,6 +37,12 @@ public partial class MainWindow : Window
         Closing += OnWindowClosing;
     }
 
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        DarkTitleBar.Apply(this);
+    }
+
     private void ApplyWindowSettings(AppSettings settings)
     {
         if (settings.WindowWidth is { } w && w >= MinWidth)

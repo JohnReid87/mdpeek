@@ -10,6 +10,8 @@ namespace EzMarkdownViewer.UI;
 
 public partial class MainWindow : Window
 {
+    public static readonly RoutedCommand FocusFilterCommand = new(nameof(FocusFilterCommand), typeof(MainWindow));
+
     private readonly MainWindowViewModel _viewModel;
     private readonly ISettingsStore _settingsStore;
     private bool _webViewReady;
@@ -152,6 +154,18 @@ public partial class MainWindow : Window
     private void DirectoryTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         _viewModel.SelectedNode = e.NewValue as DirectoryTreeNode;
+    }
+
+    private void FocusFilter_Executed(object sender, ExecutedRoutedEventArgs e)
+    {
+        if (!FilterBox.IsVisible)
+        {
+            return;
+        }
+
+        FilterBox.Focus();
+        FilterBox.SelectAll();
+        e.Handled = true;
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)

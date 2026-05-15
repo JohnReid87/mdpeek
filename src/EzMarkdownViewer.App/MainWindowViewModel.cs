@@ -20,6 +20,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IFileSystem _fileSystem;
     private readonly IMarkdownRenderer _markdownRenderer;
     private readonly IUserConfirmation _userConfirmation;
+    private readonly IUserNotification _userNotification;
+    private readonly IFileAssociationRegistrar _fileAssociationRegistrar;
 
     [ObservableProperty]
     private string _windowTitle = AppName;
@@ -40,12 +42,16 @@ public partial class MainWindowViewModel : ObservableObject
         IFolderPicker folderPicker,
         IFileSystem fileSystem,
         IMarkdownRenderer markdownRenderer,
-        IUserConfirmation userConfirmation)
+        IUserConfirmation userConfirmation,
+        IUserNotification userNotification,
+        IFileAssociationRegistrar fileAssociationRegistrar)
     {
         _folderPicker = folderPicker;
         _fileSystem = fileSystem;
         _markdownRenderer = markdownRenderer;
         _userConfirmation = userConfirmation;
+        _userNotification = userNotification;
+        _fileAssociationRegistrar = fileAssociationRegistrar;
     }
 
     /// <summary>
@@ -308,10 +314,40 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void RegisterFileAssociation()
     {
+        try
+        {
+            _fileAssociationRegistrar.Register();
+        }
+        catch (Exception ex)
+        {
+            _userNotification.Notify(
+                "Registration failed",
+                $"Could not register the .md file association: {ex.Message}");
+            return;
+        }
+
+        _userNotification.Notify(
+            "Registered",
+            $"{AppName} is now registered as a handler for .md files. To make it the default, open Windows Settings → Apps → Default apps and pick it for the .md extension.");
     }
 
     [RelayCommand]
     private void UnregisterFileAssociation()
     {
+        try
+        {
+            _fileAssociationRegistrar.Unregister();
+        }
+        catch (Exception ex)
+        {
+            _userNotification.Notify(
+                "Unregistration failed",
+                $"Could not unregister the .md file association: {ex.Message}");
+            return;
+        }
+
+        _userNotification.Notify(
+            "Unregistered",
+            $"{AppName} has been removed from the list of registered handlers for .md files.");
     }
 }

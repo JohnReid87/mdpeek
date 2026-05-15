@@ -38,6 +38,8 @@ public partial class App : Application
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();
         services.AddSingleton<IFolderPicker, WpfFolderPicker>();
         services.AddSingleton<IUserConfirmation, WpfUserConfirmation>();
+        services.AddSingleton<IUserNotification, WpfUserNotification>();
+        services.AddSingleton<IFileAssociationRegistrar, WindowsFileAssociationRegistrar>();
         services.AddSingleton<ISettingsStore>(_ => new JsonSettingsStore(GetSettingsFilePath()));
         services.AddSingleton(startupOptions);
         services.AddSingleton<MainWindowViewModel>();

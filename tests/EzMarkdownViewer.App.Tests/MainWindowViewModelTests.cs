@@ -13,12 +13,16 @@ public class MainWindowViewModelTests
         IFolderPicker? picker = null,
         IFileSystem? fs = null,
         IMarkdownRenderer? renderer = null,
-        IUserConfirmation? confirmation = null) =>
+        IUserConfirmation? confirmation = null,
+        IUserNotification? notification = null,
+        IFileAssociationRegistrar? registrar = null) =>
         new(
             picker ?? Substitute.For<IFolderPicker>(),
             fs ?? Substitute.For<IFileSystem>(),
             renderer ?? Substitute.For<IMarkdownRenderer>(),
-            confirmation ?? Substitute.For<IUserConfirmation>());
+            confirmation ?? Substitute.For<IUserConfirmation>(),
+            notification ?? Substitute.For<IUserNotification>(),
+            registrar ?? Substitute.For<IFileAssociationRegistrar>());
 
     [Fact]
     public void OpenFolder_WhenUserPicksFolder_SetsRootNodeForChosenPath()
@@ -696,5 +700,59 @@ public class MainWindowViewModelTests
 
         vm.HtmlContent.Should().Be("<html>edge</html>");
         confirmation.DidNotReceiveWithAnyArgs().Confirm(default!, default!);
+    }
+
+    [Fact]
+    public void RegisterFileAssociation_InvokesRegistrarAndNotifiesOnSuccess()
+    {
+        var registrar = Substitute.For<IFileAssociationRegistrar>();
+        var notification = Substitute.For<IUserNotification>();
+        var vm = CreateViewModel(registrar: registrar, notification: notification);
+
+        vm.RegisterFileAssociationCommand.Execute(null);
+
+        registrar.Received(1).Register();
+        notification.Received(1).Notify("Registered", Arg.Any<string>());
+    }
+
+    [Fact]
+    public void RegisterFileAssociation_WhenRegistrarThrows_NotifiesFailureAndDoesNotShowSuccess()
+    {
+        var registrar = Substitute.For<IFileAssociationRegistrar>();
+        registrar.When(r => r.Register()).Do(_ => throw new UnauthorizedAccessException("nope"));
+        var notification = Substitute.For<IUserNotification>();
+        var vm = CreateViewModel(registrar: registrar, notification: notification);
+
+        vm.RegisterFileAssociationCommand.Execute(null);
+
+        notification.Received(1).Notify("Registration failed", Arg.Is<string>(m => m.Contains("nope")));
+        notification.DidNotReceive().Notify("Registered", Arg.Any<string>());
+    }
+
+    [Fact]
+    public void UnregisterFileAssociation_InvokesRegistrarAndNotifiesOnSuccess()
+    {
+        var registrar = Substitute.For<IFileAssociationRegistrar>();
+        var notification = Substitute.For<IUserNotification>();
+        var vm = CreateViewModel(registrar: registrar, notification: notification);
+
+        vm.UnregisterFileAssociationCommand.Execute(null);
+
+        registrar.Received(1).Unregister();
+        notification.Received(1).Notify("Unregistered", Arg.Any<string>());
+    }
+
+    [Fact]
+    public void UnregisterFileAssociation_WhenRegistrarThrows_NotifiesFailureAndDoesNotShowSuccess()
+    {
+        var registrar = Substitute.For<IFileAssociationRegistrar>();
+        registrar.When(r => r.Unregister()).Do(_ => throw new UnauthorizedAccessException("nope"));
+        var notification = Substitute.For<IUserNotification>();
+        var vm = CreateViewModel(registrar: registrar, notification: notification);
+
+        vm.UnregisterFileAssociationCommand.Execute(null);
+
+        notification.Received(1).Notify("Unregistration failed", Arg.Is<string>(m => m.Contains("nope")));
+        notification.DidNotReceive().Notify("Unregistered", Arg.Any<string>());
     }
 }

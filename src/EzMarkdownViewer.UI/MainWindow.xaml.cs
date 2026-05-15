@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using EzMarkdownViewer.App;
 using EzMarkdownViewer.Core;
@@ -41,6 +42,27 @@ public partial class MainWindow : Window
     {
         base.OnSourceInitialized(e);
         DarkTitleBar.Apply(this);
+    }
+
+    // Standard 5-button-mouse convention: XButton1 = Back, XButton2 = Forward.
+    // WPF's MouseAction enum has no XButton members, so the binding lives here
+    // instead of in <Window.InputBindings>.
+    protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseDown(e);
+
+        ICommand? command = e.ChangedButton switch
+        {
+            MouseButton.XButton1 => _viewModel.GoBackCommand,
+            MouseButton.XButton2 => _viewModel.GoForwardCommand,
+            _ => null,
+        };
+
+        if (command is not null && command.CanExecute(null))
+        {
+            command.Execute(null);
+            e.Handled = true;
+        }
     }
 
     private void ApplyWindowSettings(AppSettings settings)

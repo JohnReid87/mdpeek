@@ -51,8 +51,6 @@ public class FolderNodeTests
     {
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/zeta", "/r/alpha" });
-        fs.EnumerateFiles("/r/zeta", "*.md", SearchOption.AllDirectories).Returns(new[] { "/r/zeta/x.md" });
-        fs.EnumerateFiles("/r/alpha", "*.md", SearchOption.AllDirectories).Returns(new[] { "/r/alpha/y.md" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(new[] { "/r/zoom.md", "/r/aardvark.md" });
         var node = new FolderNode("/r", fs);
 
@@ -76,19 +74,16 @@ public class FolderNodeTests
     }
 
     [Fact]
-    public void Children_HidesFolders_WithNoMarkdownDescendants()
+    public void Children_IncludesEmptyFolders_RegardlessOfMarkdownContent()
     {
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/empty", "/r/has-md" });
-        fs.EnumerateFiles("/r/empty", "*.md", SearchOption.AllDirectories).Returns(Array.Empty<string>());
-        fs.EnumerateFiles("/r/has-md", "*.md", SearchOption.AllDirectories).Returns(new[] { "/r/has-md/notes.md" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
         var node = new FolderNode("/r", fs);
 
-        var children = node.Children;
+        var names = node.Children.Select(c => c.DisplayName).ToArray();
 
-        children.Should().ContainSingle()
-            .Which.DisplayName.Should().Be("has-md");
+        names.Should().Equal("empty", "has-md");
     }
 
     [Fact]
@@ -107,7 +102,6 @@ public class FolderNodeTests
     {
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
-        fs.EnumerateFiles("/r/sub", "*.md", SearchOption.AllDirectories).Returns(new[] { "/r/sub/inner.md" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
         var node = new FolderNode("/r", fs);
 

@@ -2,9 +2,8 @@ namespace EzMarkdownViewer.Core;
 
 /// <summary>
 /// A directory in the tree. Children are loaded lazily on first access:
-/// only direct child folders and <c>.md</c> files are returned, sorted
-/// folders-first then alphabetical (case-insensitive). Subfolders that
-/// contain no <c>.md</c> descendants anywhere in their subtree are hidden.
+/// all immediate subfolders and immediate <c>.md</c> files, sorted
+/// folders-first then alphabetical (case-insensitive).
 /// </summary>
 public sealed class FolderNode : DirectoryTreeNode
 {
@@ -28,7 +27,6 @@ public sealed class FolderNode : DirectoryTreeNode
     private IReadOnlyList<DirectoryTreeNode> LoadChildren()
     {
         var folders = _fileSystem.EnumerateDirectories(FullPath)
-            .Where(HasMarkdownDescendants)
             .Select(path => new FolderNode(path, _fileSystem))
             .OrderBy(node => node.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Cast<DirectoryTreeNode>();
@@ -40,9 +38,6 @@ public sealed class FolderNode : DirectoryTreeNode
 
         return folders.Concat(files).ToList();
     }
-
-    private bool HasMarkdownDescendants(string folderPath) =>
-        _fileSystem.EnumerateFiles(folderPath, MarkdownSearchPattern, SearchOption.AllDirectories).Any();
 
     private static string GetFolderDisplayName(string fullPath)
     {

@@ -12,7 +12,7 @@ Core interactions: pick a root folder, navigate the directory tree, view rendere
 
 ## Tech stack
 
-- **Language / runtime:** C# on .NET 8 (LTS).
+- **Language / runtime:** C# on .NET 10 (LTS).
 - **UI framework:** WPF — mature, well-suited to a tree + content split-pane layout, no extra runtime to ship, good designer-time tooling.
 - **Markdown rendering:** [Markdig](https://github.com/xoofx/markdig) for parsing markdown → HTML. CommonMark-compliant, extensible.
 - **HTML display:** WPF `WebView2` control (Edge Chromium-based) to render the HTML output.
@@ -23,7 +23,7 @@ Core interactions: pick a root folder, navigate the directory tree, view rendere
 
 ## Architecture
 
-Single Visual Studio solution `EzMarkdownViewer.sln`, layered with one-way dependencies:
+Single Visual Studio solution `EzMarkdownViewer.slnx` (the newer XML solution format), layered with one-way dependencies:
 
 - **`EzMarkdownViewer.Core`** — pure C# class library, no UI references. Owns the domain: markdown rendering (wraps Markdig), the directory-tree model, file-system abstractions (`IFileSystem`, `IMarkdownRenderer`).
 - **`EzMarkdownViewer.App`** — application layer / view-models. MVVM view-models, commands, navigation logic, settings management. No XAML or WPF types — only `System.ComponentModel` so view-models stay testable. References `Core`.

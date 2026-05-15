@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EzMarkdownViewer.App/EzMarkdownViewer.App.csproj" />
+    <Project Path="src/EzMarkdownViewer.Core/EzMarkdownViewer.Core.csproj" />
+    <Project Path="src/EzMarkdownViewer.UI/EzMarkdownViewer.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EzMarkdownViewer.App.Tests/EzMarkdownViewer.App.Tests.csproj" />
+    <Project Path="tests/EzMarkdownViewer.Core.Tests/EzMarkdownViewer.Core.Tests.csproj" />
+  </Folder>
+</Solution>

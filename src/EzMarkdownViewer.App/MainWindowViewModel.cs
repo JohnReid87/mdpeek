@@ -22,6 +22,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IUserConfirmation _userConfirmation;
     private readonly IUserNotification _userNotification;
     private readonly IFileAssociationRegistrar _fileAssociationRegistrar;
+    private readonly NavigationHistory _history = new();
+    private bool _navigatingHistory;
 
     [ObservableProperty]
     private string _windowTitle = AppName;
@@ -65,15 +67,32 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool HasNoFolderOpen => RootNode is null;
 
+    public bool CanGoBack => _history.CanGoBack;
+
+    public bool CanGoForward => _history.CanGoForward;
+
     partial void OnSelectedNodeChanged(DirectoryTreeNode? value)
     {
         if (value is MarkdownFileNode file)
         {
-            LoadFile(file);
+            var displayed = LoadFile(file);
+            if (displayed && !_navigatingHistory)
+            {
+                _history.Visit(file.FullPath);
+                OnHistoryChanged();
+            }
         }
     }
 
-    private void LoadFile(MarkdownFileNode file)
+    private void OnHistoryChanged()
+    {
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(CanGoForward));
+        GoBackCommand.NotifyCanExecuteChanged();
+        GoForwardCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool LoadFile(MarkdownFileNode file)
     {
         var path = file.FullPath;
 
@@ -82,7 +101,7 @@ public partial class MainWindowViewModel : ObservableObject
             HtmlContent = _markdownRenderer.RenderError(
                 "File not found",
                 $"The file '{path}' could not be found. It may have been moved, renamed, or deleted since the folder was opened.");
-            return;
+            return true;
         }
 
         long size;
@@ -95,7 +114,7 @@ public partial class MainWindowViewModel : ObservableObject
             HtmlContent = _markdownRenderer.RenderError(
                 "Could not read file",
                 $"The file '{path}' could not be opened: {ex.Message}");
-            return;
+            return true;
         }
 
         if (size > LargeFileThresholdBytes)
@@ -107,7 +126,7 @@ public partial class MainWindowViewModel : ObservableObject
 
             if (!confirmed)
             {
-                return;
+                return false;
             }
         }
 
@@ -121,7 +140,7 @@ public partial class MainWindowViewModel : ObservableObject
             HtmlContent = _markdownRenderer.RenderError(
                 "Could not read file",
                 $"The file '{path}' could not be opened: {ex.Message}");
-            return;
+            return true;
         }
 
         try
@@ -134,6 +153,8 @@ public partial class MainWindowViewModel : ObservableObject
                 "Could not render markdown",
                 $"The file '{path}' could not be rendered as markdown: {ex.Message}");
         }
+
+        return true;
     }
 
     [RelayCommand]
@@ -145,9 +166,51 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        _history.Clear();
+        OnHistoryChanged();
+
         var root = new FolderNode(path, _fileSystem);
         RootNode = root;
         WindowTitle = $"{root.DisplayName} — {AppName}";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private void GoBack()
+    {
+        var path = _history.Back();
+        if (path is null)
+        {
+            return;
+        }
+
+        NavigateToHistoryEntry(path);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanGoForward))]
+    private void GoForward()
+    {
+        var path = _history.Forward();
+        if (path is null)
+        {
+            return;
+        }
+
+        NavigateToHistoryEntry(path);
+    }
+
+    private void NavigateToHistoryEntry(string path)
+    {
+        _navigatingHistory = true;
+        try
+        {
+            SelectedNode = new MarkdownFileNode(path);
+        }
+        finally
+        {
+            _navigatingHistory = false;
+        }
+
+        OnHistoryChanged();
     }
 
     /// <summary>
@@ -167,6 +230,9 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (_fileSystem.DirectoryExists(path))
         {
+            _history.Clear();
+            OnHistoryChanged();
+
             var root = new FolderNode(path, _fileSystem);
             RootNode = root;
             WindowTitle = $"{root.DisplayName} — {AppName}";
@@ -184,6 +250,9 @@ public partial class MainWindowViewModel : ObservableObject
         {
             return false;
         }
+
+        _history.Clear();
+        OnHistoryChanged();
 
         var parentRoot = new FolderNode(parent, _fileSystem);
         RootNode = parentRoot;
@@ -206,6 +275,9 @@ public partial class MainWindowViewModel : ObservableObject
         {
             return;
         }
+
+        _history.Clear();
+        OnHistoryChanged();
 
         var root = new FolderNode(settings.LastFolder, _fileSystem);
         RootNode = root;
@@ -284,6 +356,8 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (!_fileSystem.DirectoryExists(rootPath))
         {
+            _history.Clear();
+            OnHistoryChanged();
             RootNode = null;
             SelectedNode = null;
             HtmlContent = null;

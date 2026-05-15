@@ -755,4 +755,279 @@ public class MainWindowViewModelTests
         notification.Received(1).Notify("Unregistration failed", Arg.Is<string>(m => m.Contains("nope")));
         notification.DidNotReceive().Notify("Unregistered", Arg.Any<string>());
     }
+
+    private static IFileSystem CreateRenderingFileSystem(params string[] paths)
+    {
+        var fs = Substitute.For<IFileSystem>();
+        foreach (var path in paths)
+        {
+            fs.FileExists(path).Returns(true);
+            fs.GetFileSizeBytes(path).Returns(64L);
+            fs.ReadAllText(path).Returns("# " + path);
+        }
+        return fs;
+    }
+
+    [Fact]
+    public void CanGoBackAndForward_AreFalseInitially()
+    {
+        var vm = CreateViewModel();
+
+        vm.CanGoBack.Should().BeFalse();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SelectingMarkdownFile_RecordsItAsCurrentHistoryEntry()
+    {
+        const string path = "C:\\notes\\a.md";
+        var fs = CreateRenderingFileSystem(path);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        vm.SelectedNode = new MarkdownFileNode(path);
+
+        vm.CanGoBack.Should().BeFalse();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SelectingSecondMarkdownFile_EnablesGoBack()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+
+        vm.CanGoBack.Should().BeTrue();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GoBack_NavigatesToPreviousFileAndEnablesForward()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+
+        vm.GoBackCommand.Execute(null);
+
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(a);
+        vm.CanGoBack.Should().BeFalse();
+        vm.CanGoForward.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GoForward_NavigatesToNextFile()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.GoBackCommand.Execute(null);
+
+        vm.GoForwardCommand.Execute(null);
+
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(b);
+        vm.CanGoBack.Should().BeTrue();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void VisitingNewFileAfterBack_DiscardsForwardStack()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        const string c = "C:\\notes\\c.md";
+        var fs = CreateRenderingFileSystem(a, b, c);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.GoBackCommand.Execute(null);
+        vm.CanGoForward.Should().BeTrue();
+
+        vm.SelectedNode = new MarkdownFileNode(c);
+
+        vm.CanGoForward.Should().BeFalse();
+        vm.CanGoBack.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GoBack_DoesNotRecordTheBackwardJumpAsANewVisit()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+
+        vm.GoBackCommand.Execute(null);
+        vm.GoForwardCommand.Execute(null);
+
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(b);
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DecliningLargeFileConfirmation_DoesNotRecordVisit()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string big = "C:\\notes\\big.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.FileExists(a).Returns(true);
+        fs.GetFileSizeBytes(a).Returns(64L);
+        fs.ReadAllText(a).Returns("# a");
+        fs.FileExists(big).Returns(true);
+        fs.GetFileSizeBytes(big).Returns(6L * 1024 * 1024);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var confirmation = Substitute.For<IUserConfirmation>();
+        confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
+        var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
+        vm.SelectedNode = new MarkdownFileNode(a);
+
+        vm.SelectedNode = new MarkdownFileNode(big);
+
+        vm.CanGoBack.Should().BeFalse();
+    }
+
+    [Fact]
+    public void OpenFolder_ClearsNavigationHistory()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var picker = Substitute.For<IFolderPicker>();
+        picker.PickFolder().Returns("C:\\other");
+        var vm = CreateViewModel(picker: picker, fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.CanGoBack.Should().BeTrue();
+
+        vm.OpenFolderCommand.Execute(null);
+
+        vm.CanGoBack.Should().BeFalse();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryOpenFromPath_WhenChangingFolder_ClearsNavigationHistory()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        const string newFolder = "C:\\other";
+        var fs = CreateRenderingFileSystem(a, b);
+        fs.DirectoryExists(newFolder).Returns(true);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.CanGoBack.Should().BeTrue();
+
+        vm.TryOpenFromPath(newFolder);
+
+        vm.CanGoBack.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Refresh_WhenRootStillExists_PreservesNavigationHistory()
+    {
+        const string folder = "C:\\notes";
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { a, b });
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.CanGoBack.Should().BeTrue();
+
+        vm.RefreshCommand.Execute(null);
+
+        vm.CanGoBack.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Refresh_WhenRootGone_ClearsNavigationHistory()
+    {
+        const string folder = "C:\\notes";
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        fs.DirectoryExists(folder).Returns(true, false);
+        fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { a, b });
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+
+        vm.RefreshCommand.Execute(null);
+
+        vm.CanGoBack.Should().BeFalse();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GoBackCommand_CanExecute_TracksCanGoBack()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        vm.GoBackCommand.CanExecute(null).Should().BeFalse();
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.GoBackCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectingFolderNode_DoesNotAffectHistory()
+    {
+        const string folder = "C:\\notes";
+        const string a = "C:\\notes\\a.md";
+        var fs = CreateRenderingFileSystem(a);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNode(a);
+
+        vm.SelectedNode = new FolderNode(folder, fs);
+
+        vm.CanGoBack.Should().BeFalse();
+        vm.CanGoForward.Should().BeFalse();
+    }
 }

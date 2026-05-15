@@ -145,6 +145,48 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Opens the tree at <paramref name="path"/>: if it is a directory, that
+    /// directory becomes the root; if it is a <c>.md</c> file, its parent
+    /// becomes the root and the file is pre-selected so it renders
+    /// immediately. Returns <c>false</c> for anything else (missing path,
+    /// non-markdown file, file in an inaccessible directory) so callers can
+    /// fall back to other startup behaviour.
+    /// </summary>
+    public bool TryOpenFromPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        if (_fileSystem.DirectoryExists(path))
+        {
+            var root = new FolderNode(path, _fileSystem);
+            RootNode = root;
+            WindowTitle = $"{root.DisplayName} — {AppName}";
+            return true;
+        }
+
+        if (!_fileSystem.FileExists(path) ||
+            !path.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var parent = Path.GetDirectoryName(path);
+        if (string.IsNullOrEmpty(parent) || !_fileSystem.DirectoryExists(parent))
+        {
+            return false;
+        }
+
+        var parentRoot = new FolderNode(parent, _fileSystem);
+        RootNode = parentRoot;
+        WindowTitle = $"{parentRoot.DisplayName} — {AppName}";
+        SelectedNode = new MarkdownFileNode(path);
+        return true;
+    }
+
+    /// <summary>
     /// Restores the parts of <paramref name="settings"/> the view-model owns:
     /// opens <see cref="AppSettings.LastFolder"/> if it still exists, expands
     /// the previously-expanded folders, and re-selects

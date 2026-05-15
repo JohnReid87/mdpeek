@@ -13,7 +13,10 @@ public partial class MainWindow : Window
     private readonly ISettingsStore _settingsStore;
     private bool _webViewReady;
 
-    public MainWindow(MainWindowViewModel viewModel, ISettingsStore settingsStore)
+    public MainWindow(
+        MainWindowViewModel viewModel,
+        ISettingsStore settingsStore,
+        StartupOptions startupOptions)
     {
         InitializeComponent();
         _viewModel = viewModel;
@@ -23,7 +26,13 @@ public partial class MainWindow : Window
 
         var settings = _settingsStore.Load();
         ApplyWindowSettings(settings);
-        _viewModel.ApplyStartupSettings(settings);
+
+        // A command-line path argument takes precedence over the persisted
+        // last-folder so users can launch the app at a specific location.
+        if (!_viewModel.TryOpenFromPath(startupOptions.Path))
+        {
+            _viewModel.ApplyStartupSettings(settings);
+        }
 
         Closing += OnWindowClosing;
     }

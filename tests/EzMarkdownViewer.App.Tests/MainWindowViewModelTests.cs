@@ -558,6 +558,128 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void TryOpenFromPath_WhenPathIsFolder_SetsRootNodeAndTitle()
+    {
+        const string path = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(path).Returns(true);
+        var vm = CreateViewModel(fs: fs);
+
+        var opened = vm.TryOpenFromPath(path);
+
+        opened.Should().BeTrue();
+        vm.RootNode.Should().NotBeNull();
+        vm.RootNode!.FullPath.Should().Be(path);
+        vm.WindowTitle.Should().Be("design — ez-markdown-viewer");
+    }
+
+    [Fact]
+    public void TryOpenFromPath_WhenPathIsMarkdownFile_OpensParentAndPreSelectsFile()
+    {
+        const string folder = "C:\\notes";
+        const string file = "C:\\notes\\readme.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.DirectoryExists(file).Returns(false);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# hi");
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render("# hi").Returns("<html>arg</html>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        var opened = vm.TryOpenFromPath(file);
+
+        opened.Should().BeTrue();
+        vm.RootNode!.FullPath.Should().Be(folder);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(file);
+        vm.HtmlContent.Should().Be("<html>arg</html>");
+    }
+
+    [Fact]
+    public void TryOpenFromPath_WhenPathIsMarkdownFile_UsesParentFolderInTitle()
+    {
+        const string folder = "C:\\notes";
+        const string file = "C:\\notes\\readme.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# hi");
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        vm.TryOpenFromPath(file);
+
+        vm.WindowTitle.Should().Be("notes — ez-markdown-viewer");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TryOpenFromPath_WhenPathBlank_ReturnsFalseAndLeavesStateUnchanged(string? path)
+    {
+        var vm = CreateViewModel();
+
+        var opened = vm.TryOpenFromPath(path);
+
+        opened.Should().BeFalse();
+        vm.RootNode.Should().BeNull();
+        vm.WindowTitle.Should().Be("ez-markdown-viewer");
+    }
+
+    [Fact]
+    public void TryOpenFromPath_WhenPathDoesNotExist_ReturnsFalse()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(Arg.Any<string>()).Returns(false);
+        fs.FileExists(Arg.Any<string>()).Returns(false);
+        var vm = CreateViewModel(fs: fs);
+
+        var opened = vm.TryOpenFromPath("C:\\nope\\missing.md");
+
+        opened.Should().BeFalse();
+        vm.RootNode.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryOpenFromPath_WhenFileIsNotMarkdown_ReturnsFalse()
+    {
+        const string file = "C:\\notes\\readme.txt";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(Arg.Any<string>()).Returns(false);
+        fs.FileExists(file).Returns(true);
+        var vm = CreateViewModel(fs: fs);
+
+        var opened = vm.TryOpenFromPath(file);
+
+        opened.Should().BeFalse();
+        vm.RootNode.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryOpenFromPath_AcceptsUppercaseMdExtension()
+    {
+        const string folder = "C:\\notes";
+        const string file = "C:\\notes\\README.MD";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# hi");
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        var opened = vm.TryOpenFromPath(file);
+
+        opened.Should().BeTrue();
+        vm.RootNode!.FullPath.Should().Be(folder);
+    }
+
+    [Fact]
     public void SelectedNode_WhenFileAtThreshold_DoesNotPromptForConfirmation()
     {
         const string path = "C:\\notes\\edge.md";

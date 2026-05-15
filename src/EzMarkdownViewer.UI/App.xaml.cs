@@ -19,21 +19,27 @@ public partial class App : Application
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
 
+        var startupOptions = new StartupOptions
+        {
+            Path = e.Args.Length > 0 ? e.Args[0] : null,
+        };
+
         var services = new ServiceCollection();
-        ConfigureServices(services);
+        ConfigureServices(services, startupOptions);
         _services = services.BuildServiceProvider();
 
         var mainWindow = _services.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
 
-    private static void ConfigureServices(IServiceCollection services)
+    private static void ConfigureServices(IServiceCollection services, StartupOptions startupOptions)
     {
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();
         services.AddSingleton<IFolderPicker, WpfFolderPicker>();
         services.AddSingleton<IUserConfirmation, WpfUserConfirmation>();
         services.AddSingleton<ISettingsStore>(_ => new JsonSettingsStore(GetSettingsFilePath()));
+        services.AddSingleton(startupOptions);
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
     }

@@ -45,7 +45,7 @@ Single Visual Studio solution `EzMarkdownViewer.slnx` (the newer XML solution fo
 - **MVVM.** CommunityToolkit.Mvvm source generators only — no hand-rolled `INotifyPropertyChanged`.
 - **Testing.** xUnit + FluentAssertions + NSubstitute. AAA pattern with blank lines between sections. Naming: `MethodName_Scenario_ExpectedBehavior`. One assertion concept per test. `[Theory]` + `[InlineData]` to cut duplication.
 - **Commits.** Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`). Imperative mood. One logical change per commit.
-- **Branches.** `feature/<issue-number>-short-description`. PR per issue. Squash-merge to `main`.
+- **Branches.** Solo project — commit directly to `main`. No feature branches, no PRs.
 - **Comments.** Only when the *why* is non-obvious. XML doc comments only on public Core APIs.
 
 ## Out of scope

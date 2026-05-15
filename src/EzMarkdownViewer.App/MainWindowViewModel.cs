@@ -144,6 +144,82 @@ public partial class MainWindowViewModel : ObservableObject
         WindowTitle = $"{root.DisplayName} — {AppName}";
     }
 
+    /// <summary>
+    /// Restores the parts of <paramref name="settings"/> the view-model owns:
+    /// opens <see cref="AppSettings.LastFolder"/> if it still exists, expands
+    /// the previously-expanded folders, and re-selects
+    /// <see cref="AppSettings.LastSelectedFile"/> if it is still present.
+    /// Missing paths are silently skipped — folders or files removed between
+    /// launches fall back to defaults rather than surfacing errors.
+    /// </summary>
+    public void ApplyStartupSettings(AppSettings settings)
+    {
+        if (settings.LastFolder is null || !_fileSystem.DirectoryExists(settings.LastFolder))
+        {
+            return;
+        }
+
+        var root = new FolderNode(settings.LastFolder, _fileSystem);
+        RootNode = root;
+        WindowTitle = $"{root.DisplayName} — {AppName}";
+
+        if (settings.ExpandedFolders.Count > 0)
+        {
+            var expanded = new HashSet<string>(settings.ExpandedFolders, StringComparer.OrdinalIgnoreCase);
+            ApplyExpansion(root, expanded);
+        }
+
+        if (settings.LastSelectedFile is not null && _fileSystem.FileExists(settings.LastSelectedFile))
+        {
+            SelectedNode = new MarkdownFileNode(settings.LastSelectedFile);
+        }
+    }
+
+    /// <summary>
+    /// Captures the view-model's current state onto <paramref name="settings"/>:
+    /// the open folder, the selected markdown file (if any), and the set of
+    /// expanded folders.
+    /// </summary>
+    public void PopulateSettingsForSave(AppSettings settings)
+    {
+        settings.LastFolder = RootNode?.FullPath;
+        settings.LastSelectedFile = SelectedNode is MarkdownFileNode file ? file.FullPath : null;
+        settings.ExpandedFolders = RootNode is null
+            ? new List<string>()
+            : CollectExpandedFolders(RootNode).ToList();
+    }
+
+    private static void ApplyExpansion(FolderNode folder, HashSet<string> expandedPaths)
+    {
+        if (!expandedPaths.Contains(folder.FullPath))
+        {
+            return;
+        }
+
+        folder.IsExpanded = true;
+        foreach (var child in folder.Children.OfType<FolderNode>())
+        {
+            ApplyExpansion(child, expandedPaths);
+        }
+    }
+
+    private static IEnumerable<string> CollectExpandedFolders(FolderNode folder)
+    {
+        if (!folder.IsExpanded)
+        {
+            yield break;
+        }
+
+        yield return folder.FullPath;
+        foreach (var child in folder.Children.OfType<FolderNode>())
+        {
+            foreach (var path in CollectExpandedFolders(child))
+            {
+                yield return path;
+            }
+        }
+    }
+
     [RelayCommand]
     private void Refresh()
     {

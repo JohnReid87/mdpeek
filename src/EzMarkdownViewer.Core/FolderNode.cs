@@ -24,6 +24,13 @@ public sealed class FolderNode : DirectoryTreeNode
     /// </summary>
     public IReadOnlyList<DirectoryTreeNode> Children => _children ??= LoadChildren();
 
+    /// <summary>
+    /// Whether this folder is currently expanded in the UI tree. Bound
+    /// two-way to <c>TreeViewItem.IsExpanded</c> so persisted expanded-folder
+    /// state can be inspected on shutdown.
+    /// </summary>
+    public bool IsExpanded { get; set; }
+
     private IReadOnlyList<DirectoryTreeNode> LoadChildren()
     {
         var folders = _fileSystem.EnumerateDirectories(FullPath)

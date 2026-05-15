@@ -230,6 +230,187 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void ApplyStartupSettings_WhenLastFolderExists_OpensRootNodeAndSetsTitle()
+    {
+        const string path = "C:\\notes";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(path).Returns(true);
+        var vm = CreateViewModel(fs: fs);
+
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = path });
+
+        vm.RootNode.Should().NotBeNull();
+        vm.RootNode!.FullPath.Should().Be(path);
+        vm.WindowTitle.Should().Be("notes — ez-markdown-viewer");
+    }
+
+    [Fact]
+    public void ApplyStartupSettings_WhenLastFolderMissing_LeavesRootNodeNull()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists("C:\\gone").Returns(false);
+        var vm = CreateViewModel(fs: fs);
+
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\gone" });
+
+        vm.RootNode.Should().BeNull();
+        vm.WindowTitle.Should().Be("ez-markdown-viewer");
+    }
+
+    [Fact]
+    public void ApplyStartupSettings_WhenLastFolderNull_DoesNothing()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var vm = CreateViewModel(fs: fs);
+
+        vm.ApplyStartupSettings(new AppSettings());
+
+        vm.RootNode.Should().BeNull();
+    }
+
+    [Fact]
+    public void ApplyStartupSettings_WhenLastSelectedFileExists_RendersIt()
+    {
+        const string folder = "C:\\notes";
+        const string file = "C:\\notes\\readme.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# hi");
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render("# hi").Returns("<html>restored</html>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        vm.ApplyStartupSettings(new AppSettings
+        {
+            LastFolder = folder,
+            LastSelectedFile = file,
+        });
+
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(file);
+        vm.HtmlContent.Should().Be("<html>restored</html>");
+    }
+
+    [Fact]
+    public void ApplyStartupSettings_WhenLastSelectedFileMissing_DoesNotSelect()
+    {
+        const string folder = "C:\\notes";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.FileExists(Arg.Any<string>()).Returns(false);
+        var vm = CreateViewModel(fs: fs);
+
+        vm.ApplyStartupSettings(new AppSettings
+        {
+            LastFolder = folder,
+            LastSelectedFile = "C:\\notes\\gone.md",
+        });
+
+        vm.SelectedNode.Should().BeNull();
+        vm.HtmlContent.Should().BeNull();
+    }
+
+    [Fact]
+    public void PopulateSettingsForSave_WhenNoFolderOpen_LeavesPathsNull()
+    {
+        var vm = CreateViewModel();
+        var settings = new AppSettings();
+
+        vm.PopulateSettingsForSave(settings);
+
+        settings.LastFolder.Should().BeNull();
+        settings.LastSelectedFile.Should().BeNull();
+        settings.ExpandedFolders.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void PopulateSettingsForSave_CapturesOpenFolderAndSelectedFile()
+    {
+        const string folder = "C:\\notes";
+        const string file = "C:\\notes\\readme.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# hi");
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html>ok</html>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = folder, LastSelectedFile = file });
+        var settings = new AppSettings();
+
+        vm.PopulateSettingsForSave(settings);
+
+        settings.LastFolder.Should().Be(folder);
+        settings.LastSelectedFile.Should().Be(file);
+    }
+
+    [Fact]
+    public void PopulateSettingsForSave_WhenFolderSelected_DoesNotSetLastSelectedFile()
+    {
+        const string folder = "C:\\notes";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
+        vm.SelectedNode = vm.RootNode;
+        var settings = new AppSettings();
+
+        vm.PopulateSettingsForSave(settings);
+
+        settings.LastSelectedFile.Should().BeNull();
+    }
+
+    [Fact]
+    public void ApplyStartupSettings_ExpandsListedFolders()
+    {
+        const string folder = "C:\\notes";
+        var sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+
+        vm.ApplyStartupSettings(new AppSettings
+        {
+            LastFolder = folder,
+            ExpandedFolders = new List<string> { folder, sub },
+        });
+
+        vm.RootNode!.IsExpanded.Should().BeTrue();
+        var child = vm.RootNode.Children.OfType<FolderNode>().Single();
+        child.IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void PopulateSettingsForSave_CapturesExpandedFolders()
+    {
+        const string folder = "C:\\notes";
+        var sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings
+        {
+            LastFolder = folder,
+            ExpandedFolders = new List<string> { folder, sub },
+        });
+        var settings = new AppSettings();
+
+        vm.PopulateSettingsForSave(settings);
+
+        settings.ExpandedFolders.Should().BeEquivalentTo(new[] { folder, sub });
+    }
+
+    [Fact]
     public void SelectedNode_WhenFileAtThreshold_DoesNotPromptForConfirmation()
     {
         const string path = "C:\\notes\\edge.md";

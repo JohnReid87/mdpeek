@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -32,8 +33,15 @@ public partial class App : Application
         services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();
         services.AddSingleton<IFolderPicker, WpfFolderPicker>();
         services.AddSingleton<IUserConfirmation, WpfUserConfirmation>();
+        services.AddSingleton<ISettingsStore>(_ => new JsonSettingsStore(GetSettingsFilePath()));
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
+    }
+
+    private static string GetSettingsFilePath()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        return Path.Combine(appData, "EzMarkdownViewer", "settings.json");
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

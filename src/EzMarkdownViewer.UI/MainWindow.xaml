@@ -54,7 +54,7 @@
 
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280" MinWidth="160" />
+                <ColumnDefinition x:Name="TreeColumn" Width="280" MinWidth="160" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" MinWidth="240" />
             </Grid.ColumnDefinitions>
@@ -71,7 +71,13 @@
                               ItemsSource="{Binding Roots}"
                               BorderThickness="0"
                               SelectedItemChanged="DirectoryTree_SelectedItemChanged"
-                              Visibility="{Binding HasFolderOpen, Converter={StaticResource BoolToVisibility}}" />
+                              Visibility="{Binding HasFolderOpen, Converter={StaticResource BoolToVisibility}}">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="{x:Type TreeViewItem}">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                    </TreeView>
                 </Grid>
             </Border>
 

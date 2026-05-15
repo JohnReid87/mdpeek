@@ -10,14 +10,81 @@ namespace EzMarkdownViewer.UI;
 public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel;
+    private readonly ISettingsStore _settingsStore;
     private bool _webViewReady;
 
-    public MainWindow(MainWindowViewModel viewModel)
+    public MainWindow(MainWindowViewModel viewModel, ISettingsStore settingsStore)
     {
         InitializeComponent();
         _viewModel = viewModel;
+        _settingsStore = settingsStore;
         DataContext = viewModel;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+        var settings = _settingsStore.Load();
+        ApplyWindowSettings(settings);
+        _viewModel.ApplyStartupSettings(settings);
+
+        Closing += OnWindowClosing;
+    }
+
+    private void ApplyWindowSettings(AppSettings settings)
+    {
+        if (settings.WindowWidth is { } w && w >= MinWidth)
+        {
+            Width = w;
+        }
+
+        if (settings.WindowHeight is { } h && h >= MinHeight)
+        {
+            Height = h;
+        }
+
+        if (settings.WindowLeft is { } left && settings.WindowTop is { } top)
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = left;
+            Top = top;
+        }
+
+        if (settings.WindowMaximized)
+        {
+            WindowState = WindowState.Maximized;
+        }
+
+        if (settings.SplitterPosition is { } sp && sp >= TreeColumn.MinWidth)
+        {
+            TreeColumn.Width = new GridLength(sp);
+        }
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        var settings = new AppSettings();
+
+        if (WindowState == WindowState.Maximized)
+        {
+            // RestoreBounds captures the un-maximized geometry, so the next
+            // launch can restore the user's preferred size if they un-maximize.
+            settings.WindowMaximized = true;
+            settings.WindowWidth = RestoreBounds.Width;
+            settings.WindowHeight = RestoreBounds.Height;
+            settings.WindowLeft = RestoreBounds.Left;
+            settings.WindowTop = RestoreBounds.Top;
+        }
+        else
+        {
+            settings.WindowWidth = Width;
+            settings.WindowHeight = Height;
+            settings.WindowLeft = Left;
+            settings.WindowTop = Top;
+        }
+
+        settings.SplitterPosition = TreeColumn.ActualWidth;
+
+        _viewModel.PopulateSettingsForSave(settings);
+
+        _settingsStore.Save(settings);
     }
 
     private async void OnWindowLoaded(object sender, RoutedEventArgs e)

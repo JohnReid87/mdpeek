@@ -223,6 +223,44 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void Refresh()
     {
+        if (RootNode is null)
+        {
+            return;
+        }
+
+        var rootPath = RootNode.FullPath;
+        var selectedFilePath = SelectedNode is MarkdownFileNode file ? file.FullPath : null;
+        var expandedFolders = new HashSet<string>(
+            CollectExpandedFolders(RootNode),
+            StringComparer.OrdinalIgnoreCase);
+
+        if (!_fileSystem.DirectoryExists(rootPath))
+        {
+            RootNode = null;
+            SelectedNode = null;
+            HtmlContent = null;
+            WindowTitle = AppName;
+            return;
+        }
+
+        var newRoot = new FolderNode(rootPath, _fileSystem);
+        RootNode = newRoot;
+        WindowTitle = $"{newRoot.DisplayName} — {AppName}";
+
+        if (expandedFolders.Count > 0)
+        {
+            ApplyExpansion(newRoot, expandedFolders);
+        }
+
+        if (selectedFilePath is not null && _fileSystem.FileExists(selectedFilePath))
+        {
+            SelectedNode = new MarkdownFileNode(selectedFilePath);
+        }
+        else
+        {
+            SelectedNode = null;
+            HtmlContent = null;
+        }
     }
 
     [RelayCommand]

@@ -19,4 +19,12 @@
     <ApplicationIcon>..\..\ez-md-vwr.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <AssemblyTitle>ez-markdown-viewer</AssemblyTitle>
+    <Product>ez-markdown-viewer</Product>
+    <Company>john-reid</Company>
+    <Copyright>Copyright © 2026 john-reid</Copyright>
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
+  </PropertyGroup>
+
 </Project>

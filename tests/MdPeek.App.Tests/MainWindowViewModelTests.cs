@@ -118,9 +118,9 @@ public class MainWindowViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.FileExists(path).Returns(true);
         fs.GetFileSizeBytes(path).Returns(128L);
-        fs.ReadAllText(path).Returns("# hello");
+        fs.ReadAllTextAsync(path, Arg.Any<CancellationToken>()).Returns("# hello");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# hello").Returns("<html>ok</html>");
+        renderer.RenderAsync("# hello", Arg.Any<CancellationToken>()).Returns("<html>ok</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
@@ -138,7 +138,7 @@ public class MainWindowViewModelTests
         vm.SelectedNode = new FolderNodeViewModel(new FolderNode("C:\\notes", fs));
 
         vm.HtmlContent.Should().BeNull();
-        renderer.DidNotReceiveWithAnyArgs().Render(default!);
+        renderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, Arg.Any<CancellationToken>());
         renderer.DidNotReceiveWithAnyArgs().RenderError(default!, default!);
     }
 
@@ -155,7 +155,7 @@ public class MainWindowViewModelTests
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>missing</html>");
-        fs.DidNotReceive().ReadAllText(Arg.Any<string>());
+        fs.DidNotReceive().ReadAllTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class MainWindowViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.FileExists(path).Returns(true);
         fs.GetFileSizeBytes(path).Returns(64L);
-        fs.ReadAllText(path).Returns(_ => throw new IOException("locked"));
+        fs.ReadAllTextAsync(path, Arg.Any<CancellationToken>()).Returns<string>(_ => throw new IOException("locked"));
         var renderer = Substitute.For<IMarkdownRenderer>();
         renderer.RenderError("Could not read file", Arg.Any<string>()).Returns("<html>ioerr</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
@@ -173,7 +173,7 @@ public class MainWindowViewModelTests
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>ioerr</html>");
-        renderer.DidNotReceiveWithAnyArgs().Render(default!);
+        renderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -183,9 +183,9 @@ public class MainWindowViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.FileExists(path).Returns(true);
         fs.GetFileSizeBytes(path).Returns(64L);
-        fs.ReadAllText(path).Returns("# hi");
+        fs.ReadAllTextAsync(path, Arg.Any<CancellationToken>()).Returns("# hi");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# hi").Returns(_ => throw new InvalidOperationException("boom"));
+        renderer.RenderAsync("# hi", Arg.Any<CancellationToken>()).Returns<string>(_ => throw new InvalidOperationException("boom"));
         renderer.RenderError("Could not render markdown", Arg.Any<string>()).Returns("<html>parseerr</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
@@ -201,9 +201,9 @@ public class MainWindowViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.FileExists(path).Returns(true);
         fs.GetFileSizeBytes(path).Returns(6L * 1024 * 1024);
-        fs.ReadAllText(path).Returns("# big");
+        fs.ReadAllTextAsync(path, Arg.Any<CancellationToken>()).Returns("# big");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# big").Returns("<html>big</html>");
+        renderer.RenderAsync("# big", Arg.Any<CancellationToken>()).Returns("<html>big</html>");
         var confirmation = Substitute.For<IUserConfirmation>();
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
         var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
@@ -229,8 +229,8 @@ public class MainWindowViewModelTests
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().BeNull();
-        fs.DidNotReceive().ReadAllText(Arg.Any<string>());
-        renderer.DidNotReceiveWithAnyArgs().Render(default!);
+        fs.DidNotReceive().ReadAllTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        renderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public class MainWindowViewModelTests
         const string path = "C:\\notes\\a.md";
         var fs = CreateRenderingFileSystem(path);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         var file = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
@@ -255,7 +255,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         var first = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
         var second = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
@@ -273,7 +273,7 @@ public class MainWindowViewModelTests
         const string path = "C:\\notes\\a.md";
         var fs = CreateRenderingFileSystem(path);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         var file = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
         vm.SelectedNode = file;
@@ -290,7 +290,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
         var bNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
@@ -312,9 +312,9 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(folder).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# hi");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# hi");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.TryOpenFromPath(file);
@@ -371,9 +371,9 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(folder).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# hi");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# hi");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# hi").Returns("<html>restored</html>");
+        renderer.RenderAsync("# hi", Arg.Any<CancellationToken>()).Returns("<html>restored</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.ApplyStartupSettings(new AppSettings
@@ -427,9 +427,9 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(folder).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# hi");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# hi");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html>ok</html>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html>ok</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder, LastSelectedFile = file });
         var settings = new AppSettings();
@@ -593,12 +593,12 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(folder).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# v1", "# v2");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# v1", "# v2");
         fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { file });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# v1").Returns("<html>v1</html>");
-        renderer.Render("# v2").Returns("<html>v2</html>");
+        renderer.RenderAsync("# v1", Arg.Any<CancellationToken>()).Returns("<html>v1</html>");
+        renderer.RenderAsync("# v2", Arg.Any<CancellationToken>()).Returns("<html>v2</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder, LastSelectedFile = file });
         vm.HtmlContent.Should().Be("<html>v1</html>");
@@ -618,12 +618,12 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(folder).Returns(true);
         fs.FileExists(file).Returns(true, false);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# hi");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# hi");
         fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
             .Returns(new[] { file }, Array.Empty<string>());
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html>hi</html>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html>hi</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder, LastSelectedFile = file });
 
@@ -677,9 +677,9 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(file).Returns(false);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# hi");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# hi");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# hi").Returns("<html>arg</html>");
+        renderer.RenderAsync("# hi", Arg.Any<CancellationToken>()).Returns("<html>arg</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         var opened = vm.TryOpenFromPath(file);
@@ -699,9 +699,9 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(folder).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# hi");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# hi");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.TryOpenFromPath(file);
@@ -762,9 +762,9 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(folder).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# hi");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# hi");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         var opened = vm.TryOpenFromPath(file);
@@ -780,9 +780,9 @@ public class MainWindowViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.FileExists(path).Returns(true);
         fs.GetFileSizeBytes(path).Returns(5L * 1024 * 1024);
-        fs.ReadAllText(path).Returns("# edge");
+        fs.ReadAllTextAsync(path, Arg.Any<CancellationToken>()).Returns("# edge");
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# edge").Returns("<html>edge</html>");
+        renderer.RenderAsync("# edge", Arg.Any<CancellationToken>()).Returns("<html>edge</html>");
         var confirmation = Substitute.For<IUserConfirmation>();
         var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
 
@@ -853,7 +853,7 @@ public class MainWindowViewModelTests
         {
             fs.FileExists(path).Returns(true);
             fs.GetFileSizeBytes(path).Returns(64L);
-            fs.ReadAllText(path).Returns("# " + path);
+            fs.ReadAllTextAsync(path, Arg.Any<CancellationToken>()).Returns("# " + path);
         }
         return fs;
     }
@@ -873,7 +873,7 @@ public class MainWindowViewModelTests
         const string path = "C:\\notes\\a.md";
         var fs = CreateRenderingFileSystem(path);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
@@ -889,7 +889,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
@@ -906,7 +906,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
@@ -925,7 +925,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
@@ -946,7 +946,7 @@ public class MainWindowViewModelTests
         const string c = "C:\\notes\\c.md";
         var fs = CreateRenderingFileSystem(a, b, c);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
@@ -966,7 +966,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
@@ -986,11 +986,11 @@ public class MainWindowViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.FileExists(a).Returns(true);
         fs.GetFileSizeBytes(a).Returns(64L);
-        fs.ReadAllText(a).Returns("# a");
+        fs.ReadAllTextAsync(a, Arg.Any<CancellationToken>()).Returns("# a");
         fs.FileExists(big).Returns(true);
         fs.GetFileSizeBytes(big).Returns(6L * 1024 * 1024);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var confirmation = Substitute.For<IUserConfirmation>();
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
@@ -1008,7 +1008,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var picker = Substitute.For<IFolderPicker>();
         picker.PickFolder().Returns("C:\\other");
         var vm = CreateViewModel(picker: picker, fs: fs, renderer: renderer);
@@ -1031,7 +1031,7 @@ public class MainWindowViewModelTests
         var fs = CreateRenderingFileSystem(a, b);
         fs.DirectoryExists(newFolder).Returns(true);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
@@ -1053,7 +1053,7 @@ public class MainWindowViewModelTests
         fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { a, b });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
@@ -1076,7 +1076,7 @@ public class MainWindowViewModelTests
         fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { a, b });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
@@ -1095,7 +1095,7 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.GoBackCommand.CanExecute(null).Should().BeFalse();
@@ -1111,7 +1111,7 @@ public class MainWindowViewModelTests
         const string a = "C:\\notes\\a.md";
         var fs = CreateRenderingFileSystem(a);
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
 
@@ -1392,13 +1392,13 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(parent).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# readme");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# readme");
         fs.EnumerateDirectories(parent).Returns(new[] { sub });
         fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
         fs.EnumerateFiles(parent, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         fs.EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { file });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render("# readme").Returns("<html>readme</html>");
+        renderer.RenderAsync("# readme", Arg.Any<CancellationToken>()).Returns("<html>readme</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(sub);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(file));
@@ -1420,13 +1420,13 @@ public class MainWindowViewModelTests
         fs.DirectoryExists(parent).Returns(true);
         fs.FileExists(file).Returns(true);
         fs.GetFileSizeBytes(file).Returns(64L);
-        fs.ReadAllText(file).Returns("# readme");
+        fs.ReadAllTextAsync(file, Arg.Any<CancellationToken>()).Returns("# readme");
         fs.EnumerateDirectories(parent).Returns(new[] { sub });
         fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
         fs.EnumerateFiles(parent, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         fs.EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { file });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(sub);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(file));
@@ -1480,11 +1480,11 @@ public class MainWindowViewModelTests
         fs.FileExists(a).Returns(true);
         fs.FileExists(b).Returns(true);
         fs.GetFileSizeBytes(Arg.Any<string>()).Returns(64L);
-        fs.ReadAllText(Arg.Any<string>()).Returns("# x");
+        fs.ReadAllTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("# x");
         fs.EnumerateDirectories(Arg.Any<string>()).Returns(Array.Empty<string>());
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(sub);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
@@ -1548,12 +1548,12 @@ public class MainWindowViewModelTests
         fs.FileExists(a).Returns(true);
         fs.FileExists(b).Returns(true);
         fs.GetFileSizeBytes(Arg.Any<string>()).Returns(64L);
-        fs.ReadAllText(Arg.Any<string>()).Returns("# x");
+        fs.ReadAllTextAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("# x");
         fs.EnumerateDirectories(parent).Returns(new[] { sub });
         fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(parent);
         vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
@@ -1759,7 +1759,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
             .Returns(new[] { a, b });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(folder);
 
@@ -1786,7 +1786,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
             .Returns(new[] { a, b });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(folder);
         var children = vm.RootNode!.Children;
@@ -1813,7 +1813,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
             .Returns(new[] { a, b });
         var renderer = Substitute.For<IMarkdownRenderer>();
-        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(folder);
         var firstChildren = vm.RootNode!.Children;
@@ -1829,5 +1829,45 @@ public class MainWindowViewModelTests
 
         vm.SelectedNode.Should().BeSameAs(newAWrapper);
         vm.SelectedNode.Should().NotBeSameAs(firstAWrapper);
+    }
+
+    [Fact]
+    public async Task SelectingDifferentFile_MidLoad_CancelsPreviousReadAndDoesNotOverwriteNewFile()
+    {
+        const string slow = "C:\\notes\\slow.md";
+        const string fast = "C:\\notes\\fast.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.FileExists(slow).Returns(true);
+        fs.FileExists(fast).Returns(true);
+        fs.GetFileSizeBytes(Arg.Any<string>()).Returns(64L);
+
+        // The slow file's read is gated on a TaskCompletionSource so it cannot
+        // complete until the test releases it — that is the window in which
+        // the second selection arrives and should cancel the in-flight load.
+        var slowRead = new TaskCompletionSource<string>();
+        fs.ReadAllTextAsync(slow, Arg.Any<CancellationToken>()).Returns(slowRead.Task);
+        fs.ReadAllTextAsync(fast, Arg.Any<CancellationToken>()).Returns(Task.FromResult("# fast"));
+
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.RenderAsync("# slow", Arg.Any<CancellationToken>()).Returns(Task.FromResult("<html>slow</html>"));
+        renderer.RenderAsync("# fast", Arg.Any<CancellationToken>()).Returns(Task.FromResult("<html>fast</html>"));
+
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(slow));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(fast));
+
+        vm.HtmlContent.Should().Be("<html>fast</html>");
+
+        // Now release the slow file's read; its continuation should observe
+        // the cancellation token set by the second selection and bail without
+        // overwriting HtmlContent.
+        slowRead.SetResult("# slow");
+        if (vm.CurrentLoadTask is not null)
+        {
+            await vm.CurrentLoadTask;
+        }
+
+        vm.HtmlContent.Should().Be("<html>fast</html>");
     }
 }

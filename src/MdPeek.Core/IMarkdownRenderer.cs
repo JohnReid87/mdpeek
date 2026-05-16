@@ -4,12 +4,15 @@ public interface IMarkdownRenderer
 {
     /// <summary>
     /// Renders a markdown document to a complete HTML document with the
-    /// embedded dark stylesheet applied. The result is suitable for passing
-    /// directly to a browser host such as WebView2's NavigateToString.
+    /// embedded dark stylesheet applied, on a background thread. The result
+    /// is suitable for passing directly to a browser host such as
+    /// WebView2's NavigateToString.
     /// </summary>
     /// <param name="markdown">The markdown source to render.</param>
+    /// <param name="cancellationToken">Cancellation signal observed before
+    /// and after the parse step.</param>
     /// <returns>A complete HTML document as a string.</returns>
-    string Render(string markdown);
+    Task<string> RenderAsync(string markdown, CancellationToken cancellationToken);
 
     /// <summary>
     /// Renders an in-pane error message as a complete HTML document with

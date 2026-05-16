@@ -9,9 +9,9 @@ public class MarkdownRendererTests
     private readonly MarkdownRenderer _sut = new();
 
     [Fact]
-    public void Render_WrapsOutput_InHtmlShellWithEmbeddedStylesheet()
+    public async Task RenderAsync_WrapsOutput_InHtmlShellWithEmbeddedStylesheet()
     {
-        var result = _sut.Render("# hi");
+        var result = await _sut.RenderAsync("# hi", CancellationToken.None);
 
         result.Should().Contain("<!DOCTYPE html>");
         result.Should().Contain("<html lang=\"en\">");
@@ -23,9 +23,9 @@ public class MarkdownRendererTests
     }
 
     [Fact]
-    public void Render_EmbeddedStylesheet_AppliesDarkTheme()
+    public async Task RenderAsync_EmbeddedStylesheet_AppliesDarkTheme()
     {
-        var result = _sut.Render(string.Empty);
+        var result = await _sut.RenderAsync(string.Empty, CancellationToken.None);
 
         result.Should().Contain("--bg: #0d1117");
         result.Should().Contain("background-color: var(--bg)");
@@ -41,30 +41,30 @@ public class MarkdownRendererTests
     [InlineData("> a quote", "<blockquote>")]
     [InlineData("- item one\n- item two", "<ul>")]
     [InlineData("1. first\n2. second", "<ol>")]
-    public void Render_CommonMarkdownConstructs_ProduceExpectedHtml(string markdown, string expectedFragment)
+    public async Task RenderAsync_CommonMarkdownConstructs_ProduceExpectedHtml(string markdown, string expectedFragment)
     {
-        var result = _sut.Render(markdown);
+        var result = await _sut.RenderAsync(markdown, CancellationToken.None);
 
         result.Should().Contain(expectedFragment);
     }
 
     [Fact]
-    public void Render_FencedCodeBlockWithLanguage_PreservesLanguageClass()
+    public async Task RenderAsync_FencedCodeBlockWithLanguage_PreservesLanguageClass()
     {
         var markdown = "```csharp\nvar x = 1;\n```";
 
-        var result = _sut.Render(markdown);
+        var result = await _sut.RenderAsync(markdown, CancellationToken.None);
 
         result.Should().Contain("<pre>");
         result.Should().Contain("language-csharp");
     }
 
     [Fact]
-    public void Render_AdvancedExtensions_RenderPipeTables()
+    public async Task RenderAsync_AdvancedExtensions_RenderPipeTables()
     {
         var markdown = "| a | b |\n|---|---|\n| 1 | 2 |";
 
-        var result = _sut.Render(markdown);
+        var result = await _sut.RenderAsync(markdown, CancellationToken.None);
 
         result.Should().Contain("<table>");
         result.Should().Contain("<th>a</th>");
@@ -72,13 +72,24 @@ public class MarkdownRendererTests
     }
 
     [Fact]
-    public void Render_AdvancedExtensions_RenderTaskLists()
+    public async Task RenderAsync_AdvancedExtensions_RenderTaskLists()
     {
         var markdown = "- [x] done\n- [ ] todo";
 
-        var result = _sut.Render(markdown);
+        var result = await _sut.RenderAsync(markdown, CancellationToken.None);
 
         result.Should().Contain("type=\"checkbox\"");
+    }
+
+    [Fact]
+    public async Task RenderAsync_WhenCancelled_ThrowsOperationCanceledException()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var act = async () => await _sut.RenderAsync("# hi", cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

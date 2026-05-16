@@ -21,12 +21,14 @@ public sealed class MarkdownRenderer : IMarkdownRenderer
     }
 
     /// <inheritdoc />
-    public string Render(string markdown)
-    {
-        var body = Markdown.ToHtml(markdown, _pipeline);
-
-        return WrapInDocument(body);
-    }
+    public Task<string> RenderAsync(string markdown, CancellationToken cancellationToken) =>
+        Task.Run(() =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var body = Markdown.ToHtml(markdown, _pipeline);
+            cancellationToken.ThrowIfCancellationRequested();
+            return WrapInDocument(body);
+        }, cancellationToken);
 
     /// <inheritdoc />
     public string RenderError(string title, string detail)

@@ -20,5 +20,6 @@ public sealed class FileSystem : IFileSystem
     public long GetFileSizeBytes(string path) => new FileInfo(path).Length;
 
     /// <inheritdoc />
-    public string ReadAllText(string path) => File.ReadAllText(path);
+    public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken) =>
+        File.ReadAllTextAsync(path, cancellationToken);
 }

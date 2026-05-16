@@ -39,6 +39,15 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _filterApplied;
     private Dictionary<string, bool>? _preFilterExpansion;
 
+    /// <summary>
+    /// Cancellation source for the most recently started file load. Selecting
+    /// a different file mid-read or mid-render cancels the previous load so
+    /// its completion does not race ahead and overwrite the new file's
+    /// rendered output.
+    /// </summary>
+    private CancellationTokenSource? _loadCts;
+    private Task? _loadTask;
+
     [ObservableProperty]
     private string _windowTitle = AppName;
 
@@ -112,14 +121,20 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (newValue is MarkdownFileNodeViewModel file)
         {
-            var displayed = LoadFile(file.File);
-            if (displayed && !_navigatingHistory)
-            {
-                _history.Visit(file.FullPath);
-                OnHistoryChanged();
-            }
+            _loadCts?.Cancel();
+            _loadCts = new CancellationTokenSource();
+            var recordHistory = !_navigatingHistory;
+            _loadTask = LoadFileAsync(file.File, recordHistory, _loadCts.Token);
         }
     }
+
+    /// <summary>
+    /// The most recently started file load, or <c>null</c> if no file has been
+    /// selected yet. Tests use this to await async completion before
+    /// asserting; production code does not need it because the load is
+    /// fire-and-forget.
+    /// </summary>
+    internal Task? CurrentLoadTask => _loadTask;
 
     partial void OnFilterTextChanged(string value)
     {
@@ -280,7 +295,7 @@ public partial class MainWindowViewModel : ObservableObject
         GoForwardCommand.NotifyCanExecuteChanged();
     }
 
-    private bool LoadFile(MarkdownFileNode file)
+    private async Task LoadFileAsync(MarkdownFileNode file, bool recordHistory, CancellationToken cancellationToken)
     {
         var path = file.FullPath;
 
@@ -289,7 +304,8 @@ public partial class MainWindowViewModel : ObservableObject
             HtmlContent = _markdownRenderer.RenderError(
                 "File not found",
                 $"The file '{path}' could not be found. It may have been moved, renamed, or deleted since the folder was opened.");
-            return true;
+            RecordHistoryVisit(recordHistory, path);
+            return;
         }
 
         long size;
@@ -302,7 +318,8 @@ public partial class MainWindowViewModel : ObservableObject
             HtmlContent = _markdownRenderer.RenderError(
                 "Could not read file",
                 $"The file '{path}' could not be opened: {ex.Message}");
-            return true;
+            RecordHistoryVisit(recordHistory, path);
+            return;
         }
 
         if (size > LargeFileThresholdBytes)
@@ -314,35 +331,77 @@ public partial class MainWindowViewModel : ObservableObject
 
             if (!confirmed)
             {
-                return false;
+                return;
             }
         }
 
         string text;
         try
         {
-            text = _fileSystem.ReadAllText(path);
+            text = await _fileSystem.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
             HtmlContent = _markdownRenderer.RenderError(
                 "Could not read file",
                 $"The file '{path}' could not be opened: {ex.Message}");
-            return true;
+            RecordHistoryVisit(recordHistory, path);
+            return;
         }
 
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        string html;
         try
         {
-            HtmlContent = _markdownRenderer.Render(text);
+            html = await _markdownRenderer.RenderAsync(text, cancellationToken).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
         }
         catch (Exception ex)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
             HtmlContent = _markdownRenderer.RenderError(
                 "Could not render markdown",
                 $"The file '{path}' could not be rendered as markdown: {ex.Message}");
+            RecordHistoryVisit(recordHistory, path);
+            return;
         }
 
-        return true;
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        HtmlContent = html;
+        RecordHistoryVisit(recordHistory, path);
+    }
+
+    private void RecordHistoryVisit(bool recordHistory, string path)
+    {
+        if (!recordHistory)
+        {
+            return;
+        }
+
+        _history.Visit(path);
+        OnHistoryChanged();
     }
 
     [RelayCommand]

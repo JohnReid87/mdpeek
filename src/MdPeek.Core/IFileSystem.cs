@@ -30,7 +30,9 @@ public interface IFileSystem
     long GetFileSizeBytes(string path);
 
     /// <summary>
-    /// Reads the full text contents of the file at <paramref name="path"/>.
+    /// Reads the full text contents of the file at <paramref name="path"/>
+    /// on a background thread, observing
+    /// <paramref name="cancellationToken"/> for cooperative cancellation.
     /// </summary>
-    string ReadAllText(string path);
+    Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken);
 }

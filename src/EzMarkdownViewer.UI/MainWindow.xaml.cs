@@ -1,10 +1,13 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
 using EzMarkdownViewer.App;
 using EzMarkdownViewer.Core;
+
+using Microsoft.Web.WebView2.Core;
 
 namespace EzMarkdownViewer.UI;
 
@@ -128,9 +131,38 @@ public partial class MainWindow : Window
 
     private async void OnWindowLoaded(object sender, RoutedEventArgs e)
     {
-        await ContentView.EnsureCoreWebView2Async();
+        try
+        {
+            await ContentView.EnsureCoreWebView2Async();
+        }
+        catch (WebView2RuntimeNotFoundException)
+        {
+            ShowWebView2RuntimeMissingDialog();
+            Application.Current.Shutdown();
+            return;
+        }
+
         _webViewReady = true;
         RenderCurrentHtml();
+    }
+
+    private void ShowWebView2RuntimeMissingDialog()
+    {
+        const string downloadUrl = "https://developer.microsoft.com/microsoft-edge/webview2/";
+
+        var result = MessageBox.Show(
+            this,
+            "ez-markdown-viewer requires the Microsoft Edge WebView2 Runtime to display rendered markdown, " +
+            "but it was not found on this PC.\n\n" +
+            "Open the download page now?",
+            "WebView2 Runtime required",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Error);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            Process.Start(new ProcessStartInfo(downloadUrl) { UseShellExecute = true });
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

@@ -1,6 +1,6 @@
 # Distribution
 
-How a copy of ez-markdown-viewer gets onto another Windows machine.
+How a copy of mdpeek gets onto another Windows machine.
 
 ## Decision
 
@@ -11,7 +11,7 @@ The end-user path is: download one `.exe` from the repo's Releases page, double-
 ## Publish command
 
 ```powershell
-dotnet publish src/EzMarkdownViewer.UI -c Release -r win-x64 `
+dotnet publish src/MdPeek.UI -c Release -r win-x64 `
   --self-contained `
   -p:PublishSingleFile=true `
   -p:IncludeAllContentForSelfExtract=true `

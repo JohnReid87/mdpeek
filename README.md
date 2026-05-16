@@ -1,10 +1,10 @@
-# ez-markdown-viewer
+# mdpeek
 
 A lightweight Windows desktop app for reading local markdown files. Point it at a folder, browse the directory tree, and view rendered `.md` files side-by-side — no server, no setup, no editor required.
 
 ## Get the app
 
-Download the latest `EzMarkdownViewer-<version>-win-x64.exe` from the [Releases page](https://github.com/JohnReid87/ez-markdown-viewer/releases) and double-click to run. No installer, no unzip.
+Download the latest `mdpeek-<version>-win-x64.exe` from the [Releases page](https://github.com/JohnReid87/mdpeek/releases) and double-click to run. No installer, no unzip.
 
 **Requirements:**
 - Windows 10 (1809+) or Windows 11, x64.
@@ -15,7 +15,7 @@ On first launch, Windows SmartScreen may warn that the publisher is unverified (
 ### Build from source
 
 ```powershell
-dotnet publish src/EzMarkdownViewer.UI -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true
+dotnet publish src/MdPeek.UI -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true
 ```
 
 See [docs/distribution.md](docs/distribution.md) for the full rationale.

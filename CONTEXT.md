@@ -1,10 +1,10 @@
-# ez-markdown-viewer — CONTEXT
+# mdpeek — CONTEXT
 
 A lightweight Windows desktop app for reading local markdown files. Point it at a folder, browse the directory tree, and view rendered `.md` files side-by-side — no server, no setup, no editor required.
 
 ## Domain
 
-ez-markdown-viewer is a single-user, read-only desktop tool for browsing local markdown documentation. It targets developers and technical writers who keep notes, design docs, READMEs, and reference material as `.md` files on disk and want a frictionless way to *read* them — not edit them.
+mdpeek is a single-user, read-only desktop tool for browsing local markdown documentation. It targets developers and technical writers who keep notes, design docs, READMEs, and reference material as `.md` files on disk and want a frictionless way to *read* them — not edit them.
 
 The primary problem it solves is the awkward gap between "open it in Notepad and read raw markdown" and "spin up MkDocs / Docusaurus / VS Code preview" for casual reading.
 
@@ -23,13 +23,13 @@ Core interactions: pick a root folder, navigate the directory tree, view rendere
 
 ## Architecture
 
-Single Visual Studio solution `EzMarkdownViewer.slnx` (the newer XML solution format), layered with one-way dependencies:
+Single Visual Studio solution `MdPeek.slnx` (the newer XML solution format), layered with one-way dependencies:
 
-- **`EzMarkdownViewer.Core`** — pure C# class library, no UI references. Owns the domain: markdown rendering (wraps Markdig), the directory-tree model, file-system abstractions (`IFileSystem`, `IMarkdownRenderer`).
-- **`EzMarkdownViewer.App`** — application layer / view-models. MVVM view-models, commands, navigation logic, settings management. No XAML or WPF types — only `System.ComponentModel` so view-models stay testable. References `Core`.
-- **`EzMarkdownViewer.UI`** — WPF executable. XAML views, WebView2 hosting, file dialogs, app startup / DI wiring. The only project that knows about WPF. References `App` and `Core`.
-- **`EzMarkdownViewer.Core.Tests`** — xUnit tests for Core.
-- **`EzMarkdownViewer.App.Tests`** — xUnit tests for view-models.
+- **`MdPeek.Core`** — pure C# class library, no UI references. Owns the domain: markdown rendering (wraps Markdig), the directory-tree model, file-system abstractions (`IFileSystem`, `IMarkdownRenderer`).
+- **`MdPeek.App`** — application layer / view-models. MVVM view-models, commands, navigation logic, settings management. No XAML or WPF types — only `System.ComponentModel` so view-models stay testable. References `Core`.
+- **`MdPeek.UI`** — WPF executable. XAML views, WebView2 hosting, file dialogs, app startup / DI wiring. The only project that knows about WPF. References `App` and `Core`.
+- **`MdPeek.Core.Tests`** — xUnit tests for Core.
+- **`MdPeek.App.Tests`** — xUnit tests for view-models.
 
 **Strict dependency direction:** `UI → App → Core`. Core depends on nothing in the solution. App never references UI.
 

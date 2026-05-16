@@ -1,12 +1,12 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Build a release artifact of ez-markdown-viewer.
+    Build a release artifact of mdpeek.
 
 .DESCRIPTION
-    Cleans and publishes EzMarkdownViewer.UI as a single-file, self-contained
+    Cleans and publishes MdPeek.UI as a single-file, self-contained
     win-x64 executable using the flags recorded in docs/distribution.md, then
-    drops it into ./artifacts/ as EzMarkdownViewer-<version>-win-x64.exe with
+    drops it into ./artifacts/ as mdpeek-<version>-win-x64.exe with
     a matching .sha256 checksum file.
 
 .PARAMETER Version
@@ -25,10 +25,10 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot     = Split-Path -Parent $PSScriptRoot
-$uiProject    = Join-Path $repoRoot 'src/EzMarkdownViewer.UI'
+$uiProject    = Join-Path $repoRoot 'src/MdPeek.UI'
 $artifactsDir = Join-Path $repoRoot 'artifacts'
 $publishDir   = Join-Path $artifactsDir "publish-$Version-win-x64"
-$finalExe     = Join-Path $artifactsDir "EzMarkdownViewer-$Version-win-x64.exe"
+$finalExe     = Join-Path $artifactsDir "mdpeek-$Version-win-x64.exe"
 $finalSha     = "$finalExe.sha256"
 
 if (Test-Path $publishDir) {
@@ -53,7 +53,7 @@ if (-not (Test-Path $artifactsDir)) {
     New-Item -ItemType Directory -Path $artifactsDir | Out-Null
 }
 
-$publishedExe = Join-Path $publishDir 'EzMarkdownViewer.UI.exe'
+$publishedExe = Join-Path $publishDir 'MdPeek.UI.exe'
 if (-not (Test-Path $publishedExe)) {
     throw "Expected published exe not found: $publishedExe"
 }

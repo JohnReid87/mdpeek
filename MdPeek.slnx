@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MdPeek.App/MdPeek.App.csproj" />
+    <Project Path="src/MdPeek.Core/MdPeek.Core.csproj" />
+    <Project Path="src/MdPeek.UI/MdPeek.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MdPeek.App.Tests/MdPeek.App.Tests.csproj" />
+    <Project Path="tests/MdPeek.Core.Tests/MdPeek.Core.Tests.csproj" />
+  </Folder>
+</Solution>

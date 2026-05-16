@@ -41,10 +41,10 @@ jobs:
           Write-Host "Resolved version: $version"
 
       - name: Restore
-        run: dotnet restore EzMarkdownViewer.slnx
+        run: dotnet restore MdPeek.slnx
 
       - name: Test
-        run: dotnet test EzMarkdownViewer.slnx -c Release --no-restore
+        run: dotnet test MdPeek.slnx -c Release --no-restore
 
       - name: Publish
         shell: pwsh
@@ -57,7 +57,7 @@ jobs:
         run: |
           $version = '${{ steps.version.outputs.version }}'
           $tag = "v$version"
-          $exe = "artifacts/EzMarkdownViewer-$version-win-x64.exe"
+          $exe = "artifacts/mdpeek-$version-win-x64.exe"
           $sha = "$exe.sha256"
           if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
             gh release create $tag $exe $sha --title $tag --generate-notes --target $env:GITHUB_SHA

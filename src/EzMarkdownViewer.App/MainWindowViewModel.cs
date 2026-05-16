@@ -36,6 +36,7 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasNoFolderOpen))]
     [NotifyPropertyChangedFor(nameof(CanGoUp))]
     [NotifyCanExecuteChangedFor(nameof(GoUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SetAsRootCommand))]
     private FolderNode? _rootNode;
 
     [ObservableProperty]
@@ -334,6 +335,32 @@ public partial class MainWindowViewModel : ObservableObject
         RootNode = root;
         WindowTitle = $"{root.DisplayName} — {AppName}";
     }
+
+    /// <summary>
+    /// Re-roots the tree at <paramref name="folder"/>. Unlike Open Folder this
+    /// keeps the back/forward navigation history intact — the user is drilling
+    /// down within the same browsing session, not starting a new one. The
+    /// filter is cleared so the new tree appears unfiltered.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanSetAsRoot))]
+    private void SetAsRoot(FolderNode? folder)
+    {
+        if (folder is null || !_fileSystem.DirectoryExists(folder.FullPath))
+        {
+            return;
+        }
+
+        FilterText = string.Empty;
+
+        var newRoot = new FolderNode(folder.FullPath, _fileSystem);
+        RootNode = newRoot;
+        WindowTitle = $"{newRoot.DisplayName} — {AppName}";
+    }
+
+    private bool CanSetAsRoot(FolderNode? folder) =>
+        folder is not null &&
+        RootNode is not null &&
+        !string.Equals(folder.FullPath, RootNode.FullPath, StringComparison.OrdinalIgnoreCase);
 
     [RelayCommand(CanExecute = nameof(CanGoUp))]
     private void GoUp()

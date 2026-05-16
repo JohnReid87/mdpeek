@@ -1426,6 +1426,136 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SetAsRoot_ReRootsTreeAtGivenFolder()
+    {
+        const string parent = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(parent).Returns(true);
+        fs.DirectoryExists(sub).Returns(true);
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(parent);
+        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+
+        vm.SetAsRootCommand.Execute(design);
+
+        vm.RootNode!.FullPath.Should().Be(sub);
+        vm.WindowTitle.Should().Be("design — ez-markdown-viewer");
+    }
+
+    [Fact]
+    public void SetAsRoot_PreservesNavigationHistory()
+    {
+        const string parent = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(parent).Returns(true);
+        fs.DirectoryExists(sub).Returns(true);
+        fs.FileExists(a).Returns(true);
+        fs.FileExists(b).Returns(true);
+        fs.GetFileSizeBytes(Arg.Any<string>()).Returns(64L);
+        fs.ReadAllText(Arg.Any<string>()).Returns("# x");
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.TryOpenFromPath(parent);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.CanGoBack.Should().BeTrue();
+        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+
+        vm.SetAsRootCommand.Execute(design);
+
+        vm.CanGoBack.Should().BeTrue();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetAsRoot_ClearsFilterText()
+    {
+        const string parent = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(parent).Returns(true);
+        fs.DirectoryExists(sub).Returns(true);
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(parent);
+        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+        vm.FilterText = "anything";
+
+        vm.SetAsRootCommand.Execute(design);
+
+        vm.FilterText.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SetAsRoot_CanExecute_IsFalseForCurrentRoot()
+    {
+        const string parent = "C:\\notes";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(parent).Returns(true);
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(parent);
+
+        vm.SetAsRootCommand.CanExecute(vm.RootNode).Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetAsRoot_CanExecute_IsTrueForDescendantFolder()
+    {
+        const string parent = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(parent).Returns(true);
+        fs.DirectoryExists(sub).Returns(true);
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(parent);
+        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+
+        vm.SetAsRootCommand.CanExecute(design).Should().BeTrue();
+    }
+
+    [Fact]
+    public void SetAsRoot_CanExecute_IsFalse_WhenNoFolderOpen()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var vm = CreateViewModel(fs: fs);
+        var orphan = new FolderNode("C:\\notes\\design", fs);
+
+        vm.SetAsRootCommand.CanExecute(orphan).Should().BeFalse();
+    }
+
+    [Fact]
+    public void SetAsRoot_WhenFolderNoLongerExists_LeavesStateUnchanged()
+    {
+        const string parent = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(parent).Returns(true);
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(parent);
+        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+        fs.DirectoryExists(sub).Returns(false);
+
+        vm.SetAsRootCommand.Execute(design);
+
+        vm.RootNode!.FullPath.Should().Be(parent);
+    }
+
+    [Fact]
     public void Refresh_PreservesFilterTextAndReappliesToRebuiltTree()
     {
         var fs = CreateFilterTreeFileSystem();

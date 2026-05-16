@@ -93,9 +93,24 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool CanGoUp => TryGetParentDirectory(RootNode?.FullPath) is not null;
 
-    partial void OnSelectedNodeChanged(DirectoryTreeNodeViewModel? value)
+    partial void OnSelectedNodeChanged(DirectoryTreeNodeViewModel? oldValue, DirectoryTreeNodeViewModel? newValue)
     {
-        if (value is MarkdownFileNodeViewModel file)
+        // Mirror SelectedNode onto the node's own IsSelected so VM-driven
+        // selection (Back/Forward, command-line open, settings restore)
+        // flows out to TreeViewItem.IsSelected via the two-way binding —
+        // the TreeView would otherwise have no way to follow programmatic
+        // selection changes.
+        if (oldValue is not null && !ReferenceEquals(oldValue, newValue))
+        {
+            oldValue.IsSelected = false;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.IsSelected = true;
+        }
+
+        if (newValue is MarkdownFileNodeViewModel file)
         {
             var displayed = LoadFile(file.File);
             if (displayed && !_navigatingHistory)

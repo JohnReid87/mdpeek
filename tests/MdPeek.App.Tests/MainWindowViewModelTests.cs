@@ -234,6 +234,96 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SelectedNode_WhenSet_SetsIsSelectedOnNewNode()
+    {
+        const string path = "C:\\notes\\a.md";
+        var fs = CreateRenderingFileSystem(path);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        var file = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+
+        vm.SelectedNode = file;
+
+        file.IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectedNode_WhenReplaced_ClearsIsSelectedOnPreviousNode()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        var first = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        var second = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = first;
+
+        vm.SelectedNode = second;
+
+        first.IsSelected.Should().BeFalse();
+        second.IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SelectedNode_WhenClearedToNull_ClearsIsSelectedOnPreviousNode()
+    {
+        const string path = "C:\\notes\\a.md";
+        var fs = CreateRenderingFileSystem(path);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        var file = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = file;
+
+        vm.SelectedNode = null;
+
+        file.IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GoBack_SetsIsSelectedOnResolvedFileNode()
+    {
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        var bNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = bNode;
+
+        vm.GoBackCommand.Execute(null);
+
+        vm.SelectedNode.Should().NotBeNull();
+        vm.SelectedNode!.IsSelected.Should().BeTrue();
+        bNode.IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryOpenFromPath_WhenPathIsMarkdownFile_SetsIsSelectedOnResolvedFileNode()
+    {
+        const string folder = "C:\\notes";
+        const string file = "C:\\notes\\readme.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# hi");
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+
+        vm.TryOpenFromPath(file);
+
+        vm.SelectedNode.Should().NotBeNull();
+        vm.SelectedNode!.IsSelected.Should().BeTrue();
+    }
+
+    [Fact]
     public void ApplyStartupSettings_WhenLastFolderExists_OpensRootNodeAndSetsTitle()
     {
         const string path = "C:\\notes";

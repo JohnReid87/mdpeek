@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 
 using MdPeek.App;
-using MdPeek.Core;
 
 using Microsoft.Web.WebView2.Core;
 
@@ -185,7 +184,7 @@ public partial class MainWindow : Window
 
     private void DirectoryTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        _viewModel.SelectedNode = e.NewValue as DirectoryTreeNode;
+        _viewModel.SelectedNode = e.NewValue as DirectoryTreeNodeViewModel;
     }
 
     private void FocusFilter_Executed(object sender, ExecutedRoutedEventArgs e)

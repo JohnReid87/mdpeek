@@ -1,5 +1,3 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-
 namespace MdPeek.Core;
 
 /// <summary>
@@ -7,7 +5,7 @@ namespace MdPeek.Core;
 /// all immediate subfolders and immediate <c>.md</c> files, sorted
 /// folders-first then alphabetical (case-insensitive).
 /// </summary>
-public sealed partial class FolderNode : DirectoryTreeNode
+public sealed class FolderNode : DirectoryTreeNode
 {
     private const string MarkdownSearchPattern = "*.md";
 
@@ -33,33 +31,6 @@ public sealed partial class FolderNode : DirectoryTreeNode
     /// the user has never opened.
     /// </summary>
     public IReadOnlyList<DirectoryTreeNode>? LoadedChildren => _children;
-
-    /// <summary>
-    /// Whether this folder is currently expanded in the UI tree. Bound
-    /// two-way to <c>TreeViewItem.IsExpanded</c> so persisted expanded-folder
-    /// state can be inspected on shutdown, and so the filter logic can
-    /// programmatically expand ancestors of matches.
-    /// </summary>
-    [ObservableProperty]
-    private bool _isExpanded;
-
-    /// <summary>
-    /// Sets <see cref="IsExpanded"/> on this folder and every already-loaded
-    /// descendant folder. Folders the user has not yet opened are left
-    /// untouched, so this operation does not trigger any disk reads.
-    /// </summary>
-    public void SetExpandedRecursive(bool isExpanded)
-    {
-        IsExpanded = isExpanded;
-        if (_children is null)
-        {
-            return;
-        }
-        foreach (var child in _children.OfType<FolderNode>())
-        {
-            child.SetExpandedRecursive(isExpanded);
-        }
-    }
 
     private IReadOnlyList<DirectoryTreeNode> LoadChildren()
     {

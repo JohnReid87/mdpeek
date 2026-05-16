@@ -123,7 +123,7 @@ public class MainWindowViewModelTests
         renderer.Render("# hello").Returns("<html>ok</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>ok</html>");
     }
@@ -135,7 +135,7 @@ public class MainWindowViewModelTests
         var renderer = Substitute.For<IMarkdownRenderer>();
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
-        vm.SelectedNode = new FolderNode("C:\\notes", fs);
+        vm.SelectedNode = new FolderNodeViewModel(new FolderNode("C:\\notes", fs));
 
         vm.HtmlContent.Should().BeNull();
         renderer.DidNotReceiveWithAnyArgs().Render(default!);
@@ -152,7 +152,7 @@ public class MainWindowViewModelTests
         renderer.RenderError("File not found", Arg.Any<string>()).Returns("<html>missing</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>missing</html>");
         fs.DidNotReceive().ReadAllText(Arg.Any<string>());
@@ -170,7 +170,7 @@ public class MainWindowViewModelTests
         renderer.RenderError("Could not read file", Arg.Any<string>()).Returns("<html>ioerr</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>ioerr</html>");
         renderer.DidNotReceiveWithAnyArgs().Render(default!);
@@ -189,7 +189,7 @@ public class MainWindowViewModelTests
         renderer.RenderError("Could not render markdown", Arg.Any<string>()).Returns("<html>parseerr</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>parseerr</html>");
     }
@@ -208,7 +208,7 @@ public class MainWindowViewModelTests
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
         var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>big</html>");
         confirmation.Received(1).Confirm(Arg.Any<string>(), Arg.Any<string>());
@@ -226,7 +226,7 @@ public class MainWindowViewModelTests
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().BeNull();
         fs.DidNotReceive().ReadAllText(Arg.Any<string>());
@@ -292,7 +292,7 @@ public class MainWindowViewModelTests
             LastSelectedFile = file,
         });
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.HtmlContent.Should().Be("<html>restored</html>");
     }
 
@@ -386,7 +386,7 @@ public class MainWindowViewModelTests
         });
 
         vm.RootNode!.IsExpanded.Should().BeTrue();
-        var child = vm.RootNode.Children.OfType<FolderNode>().Single();
+        var child = vm.RootNode.Children.OfType<FolderNodeViewModel>().Single();
         child.IsExpanded.Should().BeTrue();
     }
 
@@ -468,7 +468,7 @@ public class MainWindowViewModelTests
         vm.RefreshCommand.Execute(null);
 
         vm.RootNode!.IsExpanded.Should().BeTrue();
-        vm.RootNode.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeTrue();
+        vm.RootNode.Children.OfType<FolderNodeViewModel>().Single().IsExpanded.Should().BeTrue();
     }
 
     [Fact]
@@ -515,7 +515,7 @@ public class MainWindowViewModelTests
 
         vm.RefreshCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.HtmlContent.Should().Be("<html>v2</html>");
     }
 
@@ -596,7 +596,7 @@ public class MainWindowViewModelTests
 
         opened.Should().BeTrue();
         vm.RootNode!.FullPath.Should().Be(folder);
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.HtmlContent.Should().Be("<html>arg</html>");
     }
 
@@ -696,7 +696,7 @@ public class MainWindowViewModelTests
         var confirmation = Substitute.For<IUserConfirmation>();
         var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.HtmlContent.Should().Be("<html>edge</html>");
         confirmation.DidNotReceiveWithAnyArgs().Confirm(default!, default!);
@@ -786,7 +786,7 @@ public class MainWindowViewModelTests
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
-        vm.SelectedNode = new MarkdownFileNode(path);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
         vm.CanGoBack.Should().BeFalse();
         vm.CanGoForward.Should().BeFalse();
@@ -802,8 +802,8 @@ public class MainWindowViewModelTests
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
 
         vm.CanGoBack.Should().BeTrue();
         vm.CanGoForward.Should().BeFalse();
@@ -818,12 +818,12 @@ public class MainWindowViewModelTests
         var renderer = Substitute.For<IMarkdownRenderer>();
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
 
         vm.GoBackCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(a);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(a);
         vm.CanGoBack.Should().BeFalse();
         vm.CanGoForward.Should().BeTrue();
     }
@@ -837,13 +837,13 @@ public class MainWindowViewModelTests
         var renderer = Substitute.For<IMarkdownRenderer>();
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.GoBackCommand.Execute(null);
 
         vm.GoForwardCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(b);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(b);
         vm.CanGoBack.Should().BeTrue();
         vm.CanGoForward.Should().BeFalse();
     }
@@ -858,12 +858,12 @@ public class MainWindowViewModelTests
         var renderer = Substitute.For<IMarkdownRenderer>();
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.GoBackCommand.Execute(null);
         vm.CanGoForward.Should().BeTrue();
 
-        vm.SelectedNode = new MarkdownFileNode(c);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(c));
 
         vm.CanGoForward.Should().BeFalse();
         vm.CanGoBack.Should().BeTrue();
@@ -878,13 +878,13 @@ public class MainWindowViewModelTests
         var renderer = Substitute.For<IMarkdownRenderer>();
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
 
         vm.GoBackCommand.Execute(null);
         vm.GoForwardCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(b);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(b);
         vm.CanGoForward.Should().BeFalse();
     }
 
@@ -904,9 +904,9 @@ public class MainWindowViewModelTests
         var confirmation = Substitute.For<IUserConfirmation>();
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         var vm = CreateViewModel(fs: fs, renderer: renderer, confirmation: confirmation);
-        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
 
-        vm.SelectedNode = new MarkdownFileNode(big);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(big));
 
         vm.CanGoBack.Should().BeFalse();
     }
@@ -922,8 +922,8 @@ public class MainWindowViewModelTests
         var picker = Substitute.For<IFolderPicker>();
         picker.PickFolder().Returns("C:\\other");
         var vm = CreateViewModel(picker: picker, fs: fs, renderer: renderer);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.CanGoBack.Should().BeTrue();
 
         vm.OpenFolderCommand.Execute(null);
@@ -943,8 +943,8 @@ public class MainWindowViewModelTests
         var renderer = Substitute.For<IMarkdownRenderer>();
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.CanGoBack.Should().BeTrue();
 
         vm.TryOpenFromPath(newFolder);
@@ -966,8 +966,8 @@ public class MainWindowViewModelTests
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.CanGoBack.Should().BeTrue();
 
         vm.RefreshCommand.Execute(null);
@@ -989,8 +989,8 @@ public class MainWindowViewModelTests
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
 
         vm.RefreshCommand.Execute(null);
 
@@ -1009,8 +1009,8 @@ public class MainWindowViewModelTests
         var vm = CreateViewModel(fs: fs, renderer: renderer);
 
         vm.GoBackCommand.CanExecute(null).Should().BeFalse();
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.GoBackCommand.CanExecute(null).Should().BeTrue();
     }
 
@@ -1023,9 +1023,9 @@ public class MainWindowViewModelTests
         var renderer = Substitute.For<IMarkdownRenderer>();
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
-        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
 
-        vm.SelectedNode = new FolderNode(folder, fs);
+        vm.SelectedNode = new FolderNodeViewModel(new FolderNode(folder, fs));
 
         vm.CanGoBack.Should().BeFalse();
         vm.CanGoForward.Should().BeFalse();
@@ -1072,7 +1072,7 @@ public class MainWindowViewModelTests
         var vm = CreateViewModel(fs: fs);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
 
-        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
         vm.RootNode.IsVisible.Should().BeTrue();
         design.IsVisible.Should().BeTrue();
         design.Children.All(c => c.IsVisible).Should().BeTrue();
@@ -1087,14 +1087,14 @@ public class MainWindowViewModelTests
 
         vm.FilterText = "architecture";
 
-        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
-        var random = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
-        var notes = vm.RootNode.Children.OfType<MarkdownFileNode>().Single(f => f.DisplayName == "notes.md");
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
+        var random = vm.RootNode.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "random");
+        var notes = vm.RootNode.Children.OfType<MarkdownFileNodeViewModel>().Single(f => f.DisplayName == "notes.md");
         design.IsVisible.Should().BeTrue();
         random.IsVisible.Should().BeFalse();
         notes.IsVisible.Should().BeFalse();
-        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
-        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "readme.md").IsVisible.Should().BeFalse();
+        design.Children.OfType<MarkdownFileNodeViewModel>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
+        design.Children.OfType<MarkdownFileNodeViewModel>().Single(c => c.DisplayName == "readme.md").IsVisible.Should().BeFalse();
     }
 
     [Fact]
@@ -1108,7 +1108,7 @@ public class MainWindowViewModelTests
         vm.FilterText = "architecture";
 
         vm.RootNode.IsExpanded.Should().BeTrue();
-        var design = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        var design = vm.RootNode.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
         design.IsExpanded.Should().BeTrue();
     }
 
@@ -1121,8 +1121,8 @@ public class MainWindowViewModelTests
 
         vm.FilterText = "ARCH";
 
-        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
-        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
+        design.Children.OfType<MarkdownFileNodeViewModel>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
     }
 
     [Fact]
@@ -1147,7 +1147,7 @@ public class MainWindowViewModelTests
 
         vm.FilterText = "design";
 
-        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
         design.IsVisible.Should().BeTrue();
         design.IsExpanded.Should().BeFalse();
     }
@@ -1159,7 +1159,7 @@ public class MainWindowViewModelTests
         var vm = CreateViewModel(fs: fs);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = "C:\\notes" });
         vm.FilterText = "architecture";
-        var random = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
+        var random = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "random");
         random.IsVisible.Should().BeFalse();
 
         vm.FilterText = string.Empty;
@@ -1180,8 +1180,8 @@ public class MainWindowViewModelTests
         });
         // Pre-filter: root is expanded by the user, child folders are not.
         vm.RootNode!.IsExpanded.Should().BeTrue();
-        var design = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
-        var random = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
+        var design = vm.RootNode.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
+        var random = vm.RootNode.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "random");
         design.IsExpanded.Should().BeFalse();
         random.IsExpanded.Should().BeFalse();
 
@@ -1311,11 +1311,11 @@ public class MainWindowViewModelTests
         renderer.Render("# readme").Returns("<html>readme</html>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(sub);
-        vm.SelectedNode = new MarkdownFileNode(file);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(file));
 
         vm.GoUpCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.HtmlContent.Should().Be("<html>readme</html>");
     }
 
@@ -1339,12 +1339,12 @@ public class MainWindowViewModelTests
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(sub);
-        vm.SelectedNode = new MarkdownFileNode(file);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(file));
 
         vm.GoUpCommand.Execute(null);
 
         vm.RootNode!.IsExpanded.Should().BeTrue();
-        var designFolder = vm.RootNode.Children.OfType<FolderNode>().Single();
+        var designFolder = vm.RootNode.Children.OfType<FolderNodeViewModel>().Single();
         designFolder.IsExpanded.Should().BeTrue();
     }
 
@@ -1365,16 +1365,16 @@ public class MainWindowViewModelTests
         vm.TryOpenFromPath(sub);
         // Pre-expand the old root and its nested folder.
         vm.RootNode!.IsExpanded = true;
-        var nestedFolder = vm.RootNode.Children.OfType<FolderNode>().Single();
+        var nestedFolder = vm.RootNode.Children.OfType<FolderNodeViewModel>().Single();
         nestedFolder.IsExpanded = true;
 
         vm.GoUpCommand.Execute(null);
 
         vm.RootNode!.FullPath.Should().Be(parent);
         vm.RootNode.IsExpanded.Should().BeTrue();
-        var oldRootInNewTree = vm.RootNode.Children.OfType<FolderNode>().Single(f => f.FullPath == sub);
+        var oldRootInNewTree = vm.RootNode.Children.OfType<FolderNodeViewModel>().Single(f => f.FullPath == sub);
         oldRootInNewTree.IsExpanded.Should().BeTrue();
-        oldRootInNewTree.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeTrue();
+        oldRootInNewTree.Children.OfType<FolderNodeViewModel>().Single().IsExpanded.Should().BeTrue();
     }
 
     [Fact]
@@ -1397,8 +1397,8 @@ public class MainWindowViewModelTests
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(sub);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.CanGoBack.Should().BeTrue();
         vm.CanGoForward.Should().BeFalse();
 
@@ -1437,7 +1437,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(parent);
-        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().Single();
 
         vm.SetAsRootCommand.Execute(design);
 
@@ -1466,10 +1466,10 @@ public class MainWindowViewModelTests
         renderer.Render(Arg.Any<string>()).Returns("<html/>");
         var vm = CreateViewModel(fs: fs, renderer: renderer);
         vm.TryOpenFromPath(parent);
-        vm.SelectedNode = new MarkdownFileNode(a);
-        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
         vm.CanGoBack.Should().BeTrue();
-        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().Single();
 
         vm.SetAsRootCommand.Execute(design);
 
@@ -1489,7 +1489,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(parent);
-        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().Single();
         vm.FilterText = "anything";
 
         vm.SetAsRootCommand.Execute(design);
@@ -1521,7 +1521,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(parent);
-        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().Single();
 
         vm.SetAsRootCommand.CanExecute(design).Should().BeTrue();
     }
@@ -1531,7 +1531,7 @@ public class MainWindowViewModelTests
     {
         var fs = Substitute.For<IFileSystem>();
         var vm = CreateViewModel(fs: fs);
-        var orphan = new FolderNode("C:\\notes\\design", fs);
+        var orphan = new FolderNodeViewModel(new FolderNode("C:\\notes\\design", fs));
 
         vm.SetAsRootCommand.CanExecute(orphan).Should().BeFalse();
     }
@@ -1547,7 +1547,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(parent);
-        var design = vm.RootNode!.Children.OfType<FolderNode>().Single();
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().Single();
         fs.DirectoryExists(sub).Returns(false);
 
         vm.SetAsRootCommand.Execute(design);
@@ -1566,8 +1566,8 @@ public class MainWindowViewModelTests
         vm.RefreshCommand.Execute(null);
 
         vm.FilterText.Should().Be("architecture");
-        var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
-        var random = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
+        var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
+        var random = vm.RootNode.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "random");
         design.IsVisible.Should().BeTrue();
         design.IsExpanded.Should().BeTrue();
         random.IsVisible.Should().BeFalse();
@@ -1605,12 +1605,12 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var vm = CreateViewModel(fs: fs);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
-        _ = vm.RootNode!.Children.OfType<FolderNode>().Single().Children;
+        _ = vm.RootNode!.Children.OfType<FolderNodeViewModel>().Single().Children;
 
         vm.ExpandAllCommand.Execute(null);
 
         vm.RootNode!.IsExpanded.Should().BeTrue();
-        vm.RootNode.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeTrue();
+        vm.RootNode.Children.OfType<FolderNodeViewModel>().Single().IsExpanded.Should().BeTrue();
     }
 
     [Fact]
@@ -1630,12 +1630,12 @@ public class MainWindowViewModelTests
             ExpandedFolders = new List<string> { folder, sub },
         });
         vm.RootNode!.IsExpanded.Should().BeTrue();
-        vm.RootNode.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeTrue();
+        vm.RootNode.Children.OfType<FolderNodeViewModel>().Single().IsExpanded.Should().BeTrue();
 
         vm.CollapseAllCommand.Execute(null);
 
         vm.RootNode!.IsExpanded.Should().BeFalse();
-        vm.RootNode.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeFalse();
+        vm.RootNode.Children.OfType<FolderNodeViewModel>().Single().IsExpanded.Should().BeFalse();
     }
 
     [Fact]

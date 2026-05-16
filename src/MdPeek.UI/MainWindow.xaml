@@ -1,7 +1,7 @@
 <Window x:Class="MdPeek.UI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:core="clr-namespace:MdPeek.Core;assembly=MdPeek.Core"
+        xmlns:app="clr-namespace:MdPeek.App;assembly=MdPeek.App"
         xmlns:local="clr-namespace:MdPeek.UI"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="{Binding WindowTitle}"
@@ -16,7 +16,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
-        <HierarchicalDataTemplate DataType="{x:Type core:FolderNode}"
+        <HierarchicalDataTemplate DataType="{x:Type app:FolderNodeViewModel}"
                                   ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -48,7 +48,7 @@
             </StackPanel>
         </HierarchicalDataTemplate>
 
-        <DataTemplate DataType="{x:Type core:MarkdownFileNode}">
+        <DataTemplate DataType="{x:Type app:MarkdownFileNodeViewModel}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                            Foreground="{DynamicResource Brush.Fg}"

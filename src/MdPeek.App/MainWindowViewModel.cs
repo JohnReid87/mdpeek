@@ -37,10 +37,10 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanGoUp))]
     [NotifyCanExecuteChangedFor(nameof(GoUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(SetAsRootCommand))]
-    private FolderNode? _rootNode;
+    private FolderNodeViewModel? _rootNode;
 
     [ObservableProperty]
-    private DirectoryTreeNode? _selectedNode;
+    private DirectoryTreeNodeViewModel? _selectedNode;
 
     [ObservableProperty]
     private string? _htmlContent;
@@ -68,8 +68,8 @@ public partial class MainWindowViewModel : ObservableObject
     /// Single-item collection wrapping <see cref="RootNode"/> so that the
     /// <c>TreeView.ItemsSource</c> binding can be a simple sequence.
     /// </summary>
-    public IReadOnlyList<FolderNode> Roots =>
-        RootNode is null ? Array.Empty<FolderNode>() : new[] { RootNode };
+    public IReadOnlyList<FolderNodeViewModel> Roots =>
+        RootNode is null ? Array.Empty<FolderNodeViewModel>() : new[] { RootNode };
 
     public bool HasFolderOpen => RootNode is not null;
 
@@ -81,11 +81,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public bool CanGoUp => TryGetParentDirectory(RootNode?.FullPath) is not null;
 
-    partial void OnSelectedNodeChanged(DirectoryTreeNode? value)
+    partial void OnSelectedNodeChanged(DirectoryTreeNodeViewModel? value)
     {
-        if (value is MarkdownFileNode file)
+        if (value is MarkdownFileNodeViewModel file)
         {
-            var displayed = LoadFile(file);
+            var displayed = LoadFile(file.File);
             if (displayed && !_navigatingHistory)
             {
                 _history.Visit(file.FullPath);
@@ -99,7 +99,7 @@ public partial class MainWindowViewModel : ObservableObject
         ApplyFilter();
     }
 
-    partial void OnRootNodeChanged(FolderNode? value)
+    partial void OnRootNodeChanged(FolderNodeViewModel? value)
     {
         // A new tree has no filter state to clear — only re-apply the filter
         // if it is currently non-empty (e.g. after Refresh rebuilds the tree).
@@ -149,11 +149,11 @@ public partial class MainWindowViewModel : ObservableObject
     /// descendant matches, and is force-expanded to reveal those matches.
     /// Returns whether <paramref name="node"/> ended up visible.
     /// </summary>
-    private static bool FilterRecursive(DirectoryTreeNode node, string filter)
+    private static bool FilterRecursive(DirectoryTreeNodeViewModel node, string filter)
     {
         var selfMatches = node.DisplayName.Contains(filter, StringComparison.OrdinalIgnoreCase);
 
-        if (node is FolderNode folder)
+        if (node is FolderNodeViewModel folder)
         {
             var anyChildVisible = false;
             foreach (var child in folder.Children)
@@ -177,14 +177,14 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Restores <see cref="DirectoryTreeNode.IsVisible"/> to <c>true</c> on
-    /// <paramref name="node"/> and any descendants that were previously
-    /// loaded.
+    /// Restores <see cref="DirectoryTreeNodeViewModel.IsVisible"/> to
+    /// <c>true</c> on <paramref name="node"/> and any descendants that were
+    /// previously loaded.
     /// </summary>
-    private static void ClearFilter(DirectoryTreeNode node)
+    private static void ClearFilter(DirectoryTreeNodeViewModel node)
     {
         node.IsVisible = true;
-        if (node is FolderNode folder)
+        if (node is FolderNodeViewModel folder)
         {
             foreach (var child in folder.Children)
             {
@@ -194,26 +194,26 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Captures the <see cref="FolderNode.IsExpanded"/> state of every
-    /// already-loaded folder under <paramref name="root"/>. Folders the user
-    /// has not yet opened are not enumerated, since they default to
+    /// Captures the <see cref="FolderNodeViewModel.IsExpanded"/> state of
+    /// every already-loaded folder under <paramref name="root"/>. Folders the
+    /// user has not yet opened are not enumerated, since they default to
     /// collapsed and absence from the snapshot is treated as collapsed on
     /// restore.
     /// </summary>
-    private static Dictionary<string, bool> SnapshotExpansion(FolderNode root)
+    private static Dictionary<string, bool> SnapshotExpansion(FolderNodeViewModel root)
     {
         var map = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         Walk(root, map);
         return map;
 
-        static void Walk(FolderNode folder, Dictionary<string, bool> map)
+        static void Walk(FolderNodeViewModel folder, Dictionary<string, bool> map)
         {
             map[folder.FullPath] = folder.IsExpanded;
             if (folder.LoadedChildren is null)
             {
                 return;
             }
-            foreach (var child in folder.LoadedChildren.OfType<FolderNode>())
+            foreach (var child in folder.LoadedChildren.OfType<FolderNodeViewModel>())
             {
                 Walk(child, map);
             }
@@ -221,24 +221,24 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Restores <see cref="FolderNode.IsExpanded"/> on every loaded folder
-    /// under <paramref name="root"/> from <paramref name="snapshot"/>.
+    /// Restores <see cref="FolderNodeViewModel.IsExpanded"/> on every loaded
+    /// folder under <paramref name="root"/> from <paramref name="snapshot"/>.
     /// Folders absent from the snapshot — typically those the filter
     /// force-loaded — are collapsed back, returning the tree to its
     /// pre-filter appearance.
     /// </summary>
-    private static void RestoreExpansion(FolderNode root, Dictionary<string, bool> snapshot)
+    private static void RestoreExpansion(FolderNodeViewModel root, Dictionary<string, bool> snapshot)
     {
         Walk(root, snapshot);
 
-        static void Walk(FolderNode folder, Dictionary<string, bool> snapshot)
+        static void Walk(FolderNodeViewModel folder, Dictionary<string, bool> snapshot)
         {
             folder.IsExpanded = snapshot.TryGetValue(folder.FullPath, out var wasExpanded) && wasExpanded;
             if (folder.LoadedChildren is null)
             {
                 return;
             }
-            foreach (var child in folder.LoadedChildren.OfType<FolderNode>())
+            foreach (var child in folder.LoadedChildren.OfType<FolderNodeViewModel>())
             {
                 Walk(child, snapshot);
             }
@@ -331,9 +331,8 @@ public partial class MainWindowViewModel : ObservableObject
         OnHistoryChanged();
         FilterText = string.Empty;
 
-        var root = new FolderNode(path, _fileSystem);
-        RootNode = root;
-        WindowTitle = $"{root.DisplayName} — {AppName}";
+        RootNode = CreateRoot(path);
+        WindowTitle = $"{RootNode.DisplayName} — {AppName}";
     }
 
     /// <summary>
@@ -343,7 +342,7 @@ public partial class MainWindowViewModel : ObservableObject
     /// filter is cleared so the new tree appears unfiltered.
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanSetAsRoot))]
-    private void SetAsRoot(FolderNode? folder)
+    private void SetAsRoot(FolderNodeViewModel? folder)
     {
         if (folder is null || !_fileSystem.DirectoryExists(folder.FullPath))
         {
@@ -352,12 +351,11 @@ public partial class MainWindowViewModel : ObservableObject
 
         FilterText = string.Empty;
 
-        var newRoot = new FolderNode(folder.FullPath, _fileSystem);
-        RootNode = newRoot;
-        WindowTitle = $"{newRoot.DisplayName} — {AppName}";
+        RootNode = CreateRoot(folder.FullPath);
+        WindowTitle = $"{RootNode.DisplayName} — {AppName}";
     }
 
-    private bool CanSetAsRoot(FolderNode? folder) =>
+    private bool CanSetAsRoot(FolderNodeViewModel? folder) =>
         folder is not null &&
         RootNode is not null &&
         !string.Equals(folder.FullPath, RootNode.FullPath, StringComparison.OrdinalIgnoreCase);
@@ -376,13 +374,13 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var selectedFilePath = SelectedNode is MarkdownFileNode file ? file.FullPath : null;
+        var selectedFilePath = SelectedNode is MarkdownFileNodeViewModel file ? file.FullPath : null;
         var expandedFolders = new HashSet<string>(
             CollectExpandedFolders(RootNode),
             StringComparer.OrdinalIgnoreCase);
 
         FilterText = string.Empty;
-        var newRoot = new FolderNode(parent, _fileSystem);
+        var newRoot = CreateRoot(parent);
         RootNode = newRoot;
         WindowTitle = $"{newRoot.DisplayName} — {AppName}";
 
@@ -390,7 +388,7 @@ public partial class MainWindowViewModel : ObservableObject
         // then re-apply the user's prior expansion state to descendants so
         // Go Up adds a level above without collapsing what they had open.
         newRoot.IsExpanded = true;
-        foreach (var child in newRoot.Children.OfType<FolderNode>())
+        foreach (var child in newRoot.Children.OfType<FolderNodeViewModel>())
         {
             ApplyExpansion(child, expandedFolders);
         }
@@ -408,7 +406,7 @@ public partial class MainWindowViewModel : ObservableObject
         _navigatingHistory = true;
         try
         {
-            SelectedNode = new MarkdownFileNode(selectedFilePath);
+            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(selectedFilePath));
         }
         finally
         {
@@ -445,7 +443,7 @@ public partial class MainWindowViewModel : ObservableObject
         _navigatingHistory = true;
         try
         {
-            SelectedNode = new MarkdownFileNode(path);
+            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
         }
         finally
         {
@@ -476,9 +474,8 @@ public partial class MainWindowViewModel : ObservableObject
             OnHistoryChanged();
             FilterText = string.Empty;
 
-            var root = new FolderNode(path, _fileSystem);
-            RootNode = root;
-            WindowTitle = $"{root.DisplayName} — {AppName}";
+            RootNode = CreateRoot(path);
+            WindowTitle = $"{RootNode.DisplayName} — {AppName}";
             return true;
         }
 
@@ -498,10 +495,9 @@ public partial class MainWindowViewModel : ObservableObject
         OnHistoryChanged();
         FilterText = string.Empty;
 
-        var parentRoot = new FolderNode(parent, _fileSystem);
-        RootNode = parentRoot;
-        WindowTitle = $"{parentRoot.DisplayName} — {AppName}";
-        SelectedNode = new MarkdownFileNode(path);
+        RootNode = CreateRoot(parent);
+        WindowTitle = $"{RootNode.DisplayName} — {AppName}";
+        SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
         return true;
     }
 
@@ -523,7 +519,7 @@ public partial class MainWindowViewModel : ObservableObject
         _history.Clear();
         OnHistoryChanged();
 
-        var root = new FolderNode(settings.LastFolder, _fileSystem);
+        var root = CreateRoot(settings.LastFolder);
         RootNode = root;
         WindowTitle = $"{root.DisplayName} — {AppName}";
 
@@ -535,7 +531,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (settings.LastSelectedFile is not null && _fileSystem.FileExists(settings.LastSelectedFile))
         {
-            SelectedNode = new MarkdownFileNode(settings.LastSelectedFile);
+            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(settings.LastSelectedFile));
         }
     }
 
@@ -547,11 +543,14 @@ public partial class MainWindowViewModel : ObservableObject
     public void PopulateSettingsForSave(AppSettings settings)
     {
         settings.LastFolder = RootNode?.FullPath;
-        settings.LastSelectedFile = SelectedNode is MarkdownFileNode file ? file.FullPath : null;
+        settings.LastSelectedFile = SelectedNode is MarkdownFileNodeViewModel file ? file.FullPath : null;
         settings.ExpandedFolders = RootNode is null
             ? new List<string>()
             : CollectExpandedFolders(RootNode).ToList();
     }
+
+    private FolderNodeViewModel CreateRoot(string fullPath) =>
+        new(new FolderNode(fullPath, _fileSystem));
 
     /// <summary>
     /// Returns the parent directory of <paramref name="path"/>, or <c>null</c>
@@ -575,14 +574,14 @@ public partial class MainWindowViewModel : ObservableObject
     /// <paramref name="filePath"/>, expanding each ancestor folder so the file
     /// becomes visible in the tree.
     /// </summary>
-    private static void ExpandToFile(FolderNode root, string filePath)
+    private static void ExpandToFile(FolderNodeViewModel root, string filePath)
     {
         var current = root;
         while (true)
         {
             current.IsExpanded = true;
-            FolderNode? next = null;
-            foreach (var child in current.Children.OfType<FolderNode>())
+            FolderNodeViewModel? next = null;
+            foreach (var child in current.Children.OfType<FolderNodeViewModel>())
             {
                 if (IsAncestorOf(child.FullPath, filePath))
                 {
@@ -605,7 +604,7 @@ public partial class MainWindowViewModel : ObservableObject
             || filePath.StartsWith(folderNorm + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ApplyExpansion(FolderNode folder, HashSet<string> expandedPaths)
+    private static void ApplyExpansion(FolderNodeViewModel folder, HashSet<string> expandedPaths)
     {
         if (!expandedPaths.Contains(folder.FullPath))
         {
@@ -613,13 +612,13 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         folder.IsExpanded = true;
-        foreach (var child in folder.Children.OfType<FolderNode>())
+        foreach (var child in folder.Children.OfType<FolderNodeViewModel>())
         {
             ApplyExpansion(child, expandedPaths);
         }
     }
 
-    private static IEnumerable<string> CollectExpandedFolders(FolderNode folder)
+    private static IEnumerable<string> CollectExpandedFolders(FolderNodeViewModel folder)
     {
         if (!folder.IsExpanded)
         {
@@ -627,7 +626,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         yield return folder.FullPath;
-        foreach (var child in folder.Children.OfType<FolderNode>())
+        foreach (var child in folder.Children.OfType<FolderNodeViewModel>())
         {
             foreach (var path in CollectExpandedFolders(child))
             {
@@ -645,7 +644,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         var rootPath = RootNode.FullPath;
-        var selectedFilePath = SelectedNode is MarkdownFileNode file ? file.FullPath : null;
+        var selectedFilePath = SelectedNode is MarkdownFileNodeViewModel file ? file.FullPath : null;
         var expandedFolders = new HashSet<string>(
             CollectExpandedFolders(RootNode),
             StringComparer.OrdinalIgnoreCase);
@@ -661,7 +660,7 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var newRoot = new FolderNode(rootPath, _fileSystem);
+        var newRoot = CreateRoot(rootPath);
         RootNode = newRoot;
         WindowTitle = $"{newRoot.DisplayName} — {AppName}";
 
@@ -672,7 +671,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (selectedFilePath is not null && _fileSystem.FileExists(selectedFilePath))
         {
-            SelectedNode = new MarkdownFileNode(selectedFilePath);
+            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(selectedFilePath));
         }
         else
         {

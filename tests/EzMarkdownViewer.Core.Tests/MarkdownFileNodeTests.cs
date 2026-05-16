@@ -7,11 +7,11 @@ namespace EzMarkdownViewer.Core.Tests;
 public class MarkdownFileNodeTests
 {
     [Theory]
-    [InlineData("C:\\root\\notes.md", "notes")]
-    [InlineData("C:\\root\\README.md", "README")]
-    [InlineData("/root/.hidden.md", ".hidden")]
-    [InlineData("/root/some.file.md", "some.file")]
-    public void DisplayName_StripsMdExtension(string fullPath, string expected)
+    [InlineData("C:\\root\\notes.md", "notes.md")]
+    [InlineData("C:\\root\\README.md", "README.md")]
+    [InlineData("/root/.hidden.md", ".hidden.md")]
+    [InlineData("/root/some.file.md", "some.file.md")]
+    public void DisplayName_IsFileNameIncludingExtension(string fullPath, string expected)
     {
         var node = new MarkdownFileNode(fullPath);
 

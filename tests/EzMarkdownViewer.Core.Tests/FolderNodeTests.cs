@@ -56,7 +56,7 @@ public class FolderNodeTests
 
         var names = node.Children.Select(c => c.DisplayName).ToArray();
 
-        names.Should().Equal("alpha", "zeta", "aardvark", "zoom");
+        names.Should().Equal("alpha", "zeta", "aardvark.md", "zoom.md");
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class FolderNodeTests
 
         var names = node.Children.Select(c => c.DisplayName).ToArray();
 
-        names.Should().Equal("apple", "Banana", "Zebra");
+        names.Should().Equal("apple.md", "Banana.md", "Zebra.md");
     }
 
     [Fact]

@@ -1,13 +1,14 @@
 namespace EzMarkdownViewer.Core;
 
 /// <summary>
-/// A leaf node representing a single <c>.md</c> file. The display name
-/// strips the <c>.md</c> extension.
+/// A leaf node representing a single <c>.md</c> file. The display name is the
+/// file name including the <c>.md</c> extension, matching how the file
+/// appears in Windows Explorer.
 /// </summary>
 public sealed class MarkdownFileNode : DirectoryTreeNode
 {
     public MarkdownFileNode(string fullPath)
-        : base(Path.GetFileNameWithoutExtension(fullPath), fullPath)
+        : base(Path.GetFileName(fullPath), fullPath)
     {
     }
 }

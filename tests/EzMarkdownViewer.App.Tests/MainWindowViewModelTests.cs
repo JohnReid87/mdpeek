@@ -1089,12 +1089,12 @@ public class MainWindowViewModelTests
 
         var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
         var random = vm.RootNode.Children.OfType<FolderNode>().First(f => f.DisplayName == "random");
-        var notes = vm.RootNode.Children.OfType<MarkdownFileNode>().Single(f => f.DisplayName == "notes");
+        var notes = vm.RootNode.Children.OfType<MarkdownFileNode>().Single(f => f.DisplayName == "notes.md");
         design.IsVisible.Should().BeTrue();
         random.IsVisible.Should().BeFalse();
         notes.IsVisible.Should().BeFalse();
-        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture").IsVisible.Should().BeTrue();
-        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "readme").IsVisible.Should().BeFalse();
+        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
+        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "readme.md").IsVisible.Should().BeFalse();
     }
 
     [Fact]
@@ -1122,7 +1122,7 @@ public class MainWindowViewModelTests
         vm.FilterText = "ARCH";
 
         var design = vm.RootNode!.Children.OfType<FolderNode>().First(f => f.DisplayName == "design");
-        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture").IsVisible.Should().BeTrue();
+        design.Children.OfType<MarkdownFileNode>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
     }
 
     [Fact]

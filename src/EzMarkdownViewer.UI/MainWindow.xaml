@@ -18,20 +18,46 @@
 
         <HierarchicalDataTemplate DataType="{x:Type core:FolderNode}"
                                   ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding DisplayName}"
-                       Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
-                <TextBlock.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="Set as _Root"
-                                  Command="{Binding PlacementTarget.Tag.SetAsRootCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  CommandParameter="{Binding}" />
-                    </ContextMenu>
-                </TextBlock.ContextMenu>
-            </TextBlock>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           Foreground="{DynamicResource Brush.Fg}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0">
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Setter Property="Text" Value="&#xE8B7;" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                    <Setter Property="Text" Value="&#xE838;" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center"
+                           Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <TextBlock.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Set as _Root"
+                                      Command="{Binding PlacementTarget.Tag.SetAsRootCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      CommandParameter="{Binding}" />
+                        </ContextMenu>
+                    </TextBlock.ContextMenu>
+                </TextBlock>
+            </StackPanel>
         </HierarchicalDataTemplate>
 
         <DataTemplate DataType="{x:Type core:MarkdownFileNode}">
-            <TextBlock Text="{Binding DisplayName}" />
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           Foreground="{DynamicResource Brush.Fg}"
+                           VerticalAlignment="Center"
+                           Margin="0,0,6,0"
+                           Text="&#xE8A5;" />
+                <TextBlock Text="{Binding DisplayName}"
+                           VerticalAlignment="Center" />
+            </StackPanel>
         </DataTemplate>
     </Window.Resources>
 

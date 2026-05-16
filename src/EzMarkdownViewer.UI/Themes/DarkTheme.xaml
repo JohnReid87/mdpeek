@@ -239,12 +239,30 @@
         </Style.Triggers>
     </Style>
 
-    <!-- ContextMenu (for completeness) -->
+    <!--
+        ContextMenu: a Template override is required to actually paint the dark
+        background — the default ContextMenu template paints itself with system
+        menu chrome and ignores the Background property.
+    -->
     <Style TargetType="{x:Type ContextMenu}">
         <Setter Property="Background" Value="{DynamicResource Brush.Chrome}" />
         <Setter Property="Foreground" Value="{DynamicResource Brush.Fg}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
         <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ContextMenu}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="2">
+                        <StackPanel IsItemsHost="True"
+                                    KeyboardNavigation.DirectionalNavigation="Cycle" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- TreeView -->

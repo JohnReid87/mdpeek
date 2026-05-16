@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,6 +18,10 @@ public partial class MainWindow : Window
     private readonly MainWindowViewModel _viewModel;
     private readonly ISettingsStore _settingsStore;
     private bool _webViewReady;
+    private readonly Dictionary<string, double> _scrollPositions = new(StringComparer.OrdinalIgnoreCase);
+    private string? _renderedPath;
+    private double? _pendingScrollRestore;
+    private bool _awaitingHistoryNavigation;
 
     public MainWindow(
         MainWindowViewModel viewModel,
@@ -142,8 +147,10 @@ public partial class MainWindow : Window
         }
 
         ContentView.CoreWebView2.NavigationStarting += OnNavigationStarting;
+        ContentView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
+        _viewModel.HistoryNavigationStarting += OnHistoryNavigationStarting;
         _webViewReady = true;
-        RenderCurrentHtml();
+        await RenderCurrentHtml();
     }
 
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
@@ -213,15 +220,25 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainWindowViewModel.HtmlContent))
         {
-            RenderCurrentHtml();
+            _ = RenderCurrentHtml();
         }
     }
 
-    private void RenderCurrentHtml()
+    private async Task RenderCurrentHtml()
     {
         if (!_webViewReady)
         {
             return;
+        }
+
+        // Capture the scroll position of the page being navigated away from.
+        if (_renderedPath != null)
+        {
+            var scrollResult = await ContentView.CoreWebView2.ExecuteScriptAsync("window.scrollY");
+            if (double.TryParse(scrollResult, NumberStyles.Float, CultureInfo.InvariantCulture, out var scrollY))
+            {
+                _scrollPositions[_renderedPath] = scrollY;
+            }
         }
 
         var html = _viewModel.HtmlContent ?? string.Empty;
@@ -232,9 +249,35 @@ public partial class MainWindow : Window
         {
             var fileUri = new Uri(file.FullPath).AbsoluteUri;
             html = html.Replace("<head>", $"<head>\n<base href=\"{fileUri}\">", StringComparison.Ordinal);
+
+            _pendingScrollRestore = (_awaitingHistoryNavigation && _scrollPositions.TryGetValue(file.FullPath, out var storedY))
+                ? storedY
+                : null;
+            _renderedPath = file.FullPath;
+        }
+        else
+        {
+            _pendingScrollRestore = null;
+            _renderedPath = null;
         }
 
+        _awaitingHistoryNavigation = false;
         ContentView.NavigateToString(html);
+    }
+
+    private void OnHistoryNavigationStarting(object? sender, EventArgs e)
+    {
+        _awaitingHistoryNavigation = true;
+    }
+
+    private async void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+    {
+        if (_pendingScrollRestore is double scrollY)
+        {
+            _pendingScrollRestore = null;
+            await ContentView.CoreWebView2.ExecuteScriptAsync(
+                $"window.scrollTo(0, {scrollY.ToString(CultureInfo.InvariantCulture)});");
+        }
     }
 
     private void DirectoryTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

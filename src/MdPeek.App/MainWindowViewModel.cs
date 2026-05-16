@@ -36,6 +36,12 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly Dictionary<string, MarkdownFileNodeViewModel> _fileIndex =
         new(StringComparer.OrdinalIgnoreCase);
     private bool _navigatingHistory;
+
+    /// <summary>
+    /// Raised just before a Back/Forward navigation begins, so the UI can
+    /// capture the current scroll position before the new page loads.
+    /// </summary>
+    public event EventHandler? HistoryNavigationStarting;
     private bool _filterApplied;
     private Dictionary<string, bool>? _preFilterExpansion;
 
@@ -526,6 +532,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void NavigateToHistoryEntry(string path)
     {
+        HistoryNavigationStarting?.Invoke(this, EventArgs.Empty);
         _navigatingHistory = true;
         try
         {

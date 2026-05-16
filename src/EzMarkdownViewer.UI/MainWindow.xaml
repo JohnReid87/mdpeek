@@ -32,6 +32,7 @@
         <KeyBinding Key="F5" Command="{Binding RefreshCommand}" />
         <KeyBinding Key="Left" Modifiers="Alt" Command="{Binding GoBackCommand}" />
         <KeyBinding Key="Right" Modifiers="Alt" Command="{Binding GoForwardCommand}" />
+        <KeyBinding Key="Up" Modifiers="Alt" Command="{Binding GoUpCommand}" />
     </Window.InputBindings>
 
     <Window.CommandBindings>
@@ -45,6 +46,9 @@
                 <MenuItem Header="_Open Folder..."
                           InputGestureText="Ctrl+O"
                           Command="{Binding OpenFolderCommand}" />
+                <MenuItem Header="Go _Up"
+                          InputGestureText="Alt+Up"
+                          Command="{Binding GoUpCommand}" />
                 <Separator />
                 <MenuItem Header="E_xit" Click="Exit_Click" />
             </MenuItem>
@@ -80,6 +84,13 @@
                         ToolTip="Forward (Alt+Right)"
                         AutomationProperties.Name="Forward"
                         Command="{Binding GoForwardCommand}"
+                        MinWidth="32"
+                        Padding="6,2"
+                        Margin="2,0" />
+                <Button Content="&#x2191;"
+                        ToolTip="Go Up (Alt+Up)"
+                        AutomationProperties.Name="Go Up"
+                        Command="{Binding GoUpCommand}"
                         MinWidth="32"
                         Padding="6,2"
                         Margin="2,0" />

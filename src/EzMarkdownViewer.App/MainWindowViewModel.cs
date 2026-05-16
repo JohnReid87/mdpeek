@@ -34,6 +34,8 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(Roots))]
     [NotifyPropertyChangedFor(nameof(HasFolderOpen))]
     [NotifyPropertyChangedFor(nameof(HasNoFolderOpen))]
+    [NotifyPropertyChangedFor(nameof(CanGoUp))]
+    [NotifyCanExecuteChangedFor(nameof(GoUpCommand))]
     private FolderNode? _rootNode;
 
     [ObservableProperty]
@@ -75,6 +77,8 @@ public partial class MainWindowViewModel : ObservableObject
     public bool CanGoBack => _history.CanGoBack;
 
     public bool CanGoForward => _history.CanGoForward;
+
+    public bool CanGoUp => TryGetParentDirectory(RootNode?.FullPath) is not null;
 
     partial void OnSelectedNodeChanged(DirectoryTreeNode? value)
     {
@@ -331,6 +335,60 @@ public partial class MainWindowViewModel : ObservableObject
         WindowTitle = $"{root.DisplayName} — {AppName}";
     }
 
+    [RelayCommand(CanExecute = nameof(CanGoUp))]
+    private void GoUp()
+    {
+        if (RootNode is null)
+        {
+            return;
+        }
+
+        var parent = TryGetParentDirectory(RootNode.FullPath);
+        if (parent is null || !_fileSystem.DirectoryExists(parent))
+        {
+            return;
+        }
+
+        var selectedFilePath = SelectedNode is MarkdownFileNode file ? file.FullPath : null;
+        var expandedFolders = new HashSet<string>(
+            CollectExpandedFolders(RootNode),
+            StringComparer.OrdinalIgnoreCase);
+
+        FilterText = string.Empty;
+        var newRoot = new FolderNode(parent, _fileSystem);
+        RootNode = newRoot;
+        WindowTitle = $"{newRoot.DisplayName} — {AppName}";
+
+        // Expand the new root so the previous root (now a child) is visible,
+        // then re-apply the user's prior expansion state to descendants so
+        // Go Up adds a level above without collapsing what they had open.
+        newRoot.IsExpanded = true;
+        foreach (var child in newRoot.Children.OfType<FolderNode>())
+        {
+            ApplyExpansion(child, expandedFolders);
+        }
+
+        if (selectedFilePath is null)
+        {
+            return;
+        }
+
+        ExpandToFile(newRoot, selectedFilePath);
+
+        // Re-select the file in the new tree without recording a history entry —
+        // Go Up does not change which file is being viewed, so it should not
+        // count as a new visit.
+        _navigatingHistory = true;
+        try
+        {
+            SelectedNode = new MarkdownFileNode(selectedFilePath);
+        }
+        finally
+        {
+            _navigatingHistory = false;
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private void GoBack()
     {
@@ -466,6 +524,58 @@ public partial class MainWindowViewModel : ObservableObject
         settings.ExpandedFolders = RootNode is null
             ? new List<string>()
             : CollectExpandedFolders(RootNode).ToList();
+    }
+
+    /// <summary>
+    /// Returns the parent directory of <paramref name="path"/>, or <c>null</c>
+    /// if <paramref name="path"/> is itself a root (e.g. <c>C:\</c>) or is
+    /// otherwise without a parent.
+    /// </summary>
+    private static string? TryGetParentDirectory(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        var trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var parent = Path.GetDirectoryName(trimmed);
+        return string.IsNullOrEmpty(parent) ? null : parent;
+    }
+
+    /// <summary>
+    /// Walks <paramref name="root"/> down to the folder containing
+    /// <paramref name="filePath"/>, expanding each ancestor folder so the file
+    /// becomes visible in the tree.
+    /// </summary>
+    private static void ExpandToFile(FolderNode root, string filePath)
+    {
+        var current = root;
+        while (true)
+        {
+            current.IsExpanded = true;
+            FolderNode? next = null;
+            foreach (var child in current.Children.OfType<FolderNode>())
+            {
+                if (IsAncestorOf(child.FullPath, filePath))
+                {
+                    next = child;
+                    break;
+                }
+            }
+            if (next is null)
+            {
+                return;
+            }
+            current = next;
+        }
+    }
+
+    private static bool IsAncestorOf(string folder, string filePath)
+    {
+        var folderNorm = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return filePath.StartsWith(folderNorm + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            || filePath.StartsWith(folderNorm + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void ApplyExpansion(FolderNode folder, HashSet<string> expandedPaths)

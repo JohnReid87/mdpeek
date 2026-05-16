@@ -1226,6 +1226,206 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void CanGoUp_IsFalse_WhenNoFolderOpen()
+    {
+        var vm = CreateViewModel();
+
+        vm.CanGoUp.Should().BeFalse();
+        vm.GoUpCommand.CanExecute(null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void CanGoUp_IsTrue_WhenRootHasParent()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists("C:\\notes\\design").Returns(true);
+        var vm = CreateViewModel(fs: fs);
+
+        vm.TryOpenFromPath("C:\\notes\\design");
+
+        vm.CanGoUp.Should().BeTrue();
+        vm.GoUpCommand.CanExecute(null).Should().BeTrue();
+    }
+
+    [Fact]
+    public void CanGoUp_IsFalse_WhenRootIsDriveRoot()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists("C:\\").Returns(true);
+        var vm = CreateViewModel(fs: fs);
+
+        vm.TryOpenFromPath("C:\\");
+
+        vm.CanGoUp.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GoUp_ReRootsTreeAtParentFolder()
+    {
+        const string sub = "C:\\notes\\design";
+        const string parent = "C:\\notes";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(sub).Returns(true);
+        fs.DirectoryExists(parent).Returns(true);
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(sub);
+
+        vm.GoUpCommand.Execute(null);
+
+        vm.RootNode!.FullPath.Should().Be(parent);
+        vm.WindowTitle.Should().Be("notes — ez-markdown-viewer");
+    }
+
+    [Fact]
+    public void GoUp_WhenParentDoesNotExist_LeavesStateUnchanged()
+    {
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(sub).Returns(true);
+        fs.DirectoryExists("C:\\notes").Returns(false);
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(sub);
+
+        vm.GoUpCommand.Execute(null);
+
+        vm.RootNode!.FullPath.Should().Be(sub);
+    }
+
+    [Fact]
+    public void GoUp_PreservesSelectedFile()
+    {
+        const string sub = "C:\\notes\\design";
+        const string parent = "C:\\notes";
+        const string file = "C:\\notes\\design\\readme.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(sub).Returns(true);
+        fs.DirectoryExists(parent).Returns(true);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# readme");
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(parent, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { file });
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render("# readme").Returns("<html>readme</html>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.TryOpenFromPath(sub);
+        vm.SelectedNode = new MarkdownFileNode(file);
+
+        vm.GoUpCommand.Execute(null);
+
+        vm.SelectedNode.Should().BeOfType<MarkdownFileNode>().Which.FullPath.Should().Be(file);
+        vm.HtmlContent.Should().Be("<html>readme</html>");
+    }
+
+    [Fact]
+    public void GoUp_ExpandsAncestorFoldersOfSelectedFile()
+    {
+        const string sub = "C:\\notes\\design";
+        const string parent = "C:\\notes";
+        const string file = "C:\\notes\\design\\readme.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(sub).Returns(true);
+        fs.DirectoryExists(parent).Returns(true);
+        fs.FileExists(file).Returns(true);
+        fs.GetFileSizeBytes(file).Returns(64L);
+        fs.ReadAllText(file).Returns("# readme");
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(parent, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { file });
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.TryOpenFromPath(sub);
+        vm.SelectedNode = new MarkdownFileNode(file);
+
+        vm.GoUpCommand.Execute(null);
+
+        vm.RootNode!.IsExpanded.Should().BeTrue();
+        var designFolder = vm.RootNode.Children.OfType<FolderNode>().Single();
+        designFolder.IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GoUp_PreservesExpansionStateOfFoldersUnderTheOldRoot()
+    {
+        const string sub = "C:\\notes\\design";
+        const string parent = "C:\\notes";
+        const string nested = "C:\\notes\\design\\nested";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(sub).Returns(true);
+        fs.DirectoryExists(parent).Returns(true);
+        fs.EnumerateDirectories(parent).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(new[] { nested });
+        fs.EnumerateDirectories(nested).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(sub);
+        // Pre-expand the old root and its nested folder.
+        vm.RootNode!.IsExpanded = true;
+        var nestedFolder = vm.RootNode.Children.OfType<FolderNode>().Single();
+        nestedFolder.IsExpanded = true;
+
+        vm.GoUpCommand.Execute(null);
+
+        vm.RootNode!.FullPath.Should().Be(parent);
+        vm.RootNode.IsExpanded.Should().BeTrue();
+        var oldRootInNewTree = vm.RootNode.Children.OfType<FolderNode>().Single(f => f.FullPath == sub);
+        oldRootInNewTree.IsExpanded.Should().BeTrue();
+        oldRootInNewTree.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GoUp_DoesNotRecordANewHistoryEntry()
+    {
+        const string sub = "C:\\notes\\design";
+        const string parent = "C:\\notes";
+        const string a = "C:\\notes\\design\\a.md";
+        const string b = "C:\\notes\\design\\b.md";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(sub).Returns(true);
+        fs.DirectoryExists(parent).Returns(true);
+        fs.FileExists(a).Returns(true);
+        fs.FileExists(b).Returns(true);
+        fs.GetFileSizeBytes(Arg.Any<string>()).Returns(64L);
+        fs.ReadAllText(Arg.Any<string>()).Returns("# x");
+        fs.EnumerateDirectories(Arg.Any<string>()).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.TryOpenFromPath(sub);
+        vm.SelectedNode = new MarkdownFileNode(a);
+        vm.SelectedNode = new MarkdownFileNode(b);
+        vm.CanGoBack.Should().BeTrue();
+        vm.CanGoForward.Should().BeFalse();
+
+        vm.GoUpCommand.Execute(null);
+
+        vm.CanGoBack.Should().BeTrue();
+        vm.CanGoForward.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GoUp_ClearsFilterText()
+    {
+        const string sub = "C:\\notes\\design";
+        const string parent = "C:\\notes";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(sub).Returns(true);
+        fs.DirectoryExists(parent).Returns(true);
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(sub);
+        vm.FilterText = "anything";
+
+        vm.GoUpCommand.Execute(null);
+
+        vm.FilterText.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Refresh_PreservesFilterTextAndReappliesToRebuiltTree()
     {
         var fs = CreateFilterTreeFileSystem();

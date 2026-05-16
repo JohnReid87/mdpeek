@@ -2,9 +2,23 @@
 
 A lightweight Windows desktop app for reading local markdown files. Point it at a folder, browse the directory tree, and view rendered `.md` files side-by-side — no server, no setup, no editor required.
 
-## Getting started
+## Get the app
 
-_TODO: instructions once the project is scaffolded._
+Download the latest `EzMarkdownViewer-<version>-win-x64.exe` from the [Releases page](https://github.com/JohnReid87/ez-markdown-viewer/releases) and double-click to run. No installer, no unzip.
+
+**Requirements:**
+- Windows 10 (1809+) or Windows 11, x64.
+- WebView2 Evergreen Runtime — preinstalled on Windows 11 and pushed to Windows 10 via Windows Update. If missing, the app will prompt you with a [download link](https://developer.microsoft.com/microsoft-edge/webview2/).
+
+On first launch, Windows SmartScreen may warn that the publisher is unverified (the exe is not code-signed). Click **More info → Run anyway**.
+
+### Build from source
+
+```powershell
+dotnet publish src/EzMarkdownViewer.UI -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true
+```
+
+See [docs/distribution.md](docs/distribution.md) for the full rationale.
 
 ## Navigating
 

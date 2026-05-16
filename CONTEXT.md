@@ -18,7 +18,7 @@ Core interactions: pick a root folder, navigate the directory tree, view rendere
 - **HTML display:** WPF `WebView2` control (Edge Chromium-based) to render the HTML output.
 - **DI container:** `Microsoft.Extensions.DependencyInjection`.
 - **MVVM helpers:** [CommunityToolkit.Mvvm](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/) for `[ObservableProperty]` / `[RelayCommand]` source generators.
-- **Packaging:** single-file self-contained publish via `dotnet publish`. No installer.
+- **Packaging:** single-file self-contained publish via `dotnet publish`, distributed via GitHub Releases. No installer. See [`docs/distribution.md`](docs/distribution.md) for the decision record.
 - **Testing:** xUnit + FluentAssertions + NSubstitute.
 
 ## Architecture

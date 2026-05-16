@@ -141,8 +141,53 @@ public partial class MainWindow : Window
             return;
         }
 
+        ContentView.CoreWebView2.NavigationStarting += OnNavigationStarting;
         _webViewReady = true;
         RenderCurrentHtml();
+    }
+
+    private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
+    {
+        // Allow the NavigateToString load itself (fires as about:blank).
+        if (e.Uri.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        e.Cancel = true;
+
+        if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri))
+        {
+            return;
+        }
+
+        if (uri.Scheme == "file")
+        {
+            var localPath = uri.LocalPath; // decoded Windows path, e.g. C:\docs\file.md
+            if (!localPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            var currentPath = (_viewModel.SelectedNode as MarkdownFileNodeViewModel)?.FullPath;
+            if (!string.IsNullOrEmpty(uri.Fragment) &&
+                string.Equals(localPath, currentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                // Same-file anchor link (#section): scroll in-page without navigating.
+                var anchor = uri.Fragment.TrimStart('#');
+                var escaped = anchor.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                _ = ContentView.CoreWebView2.ExecuteScriptAsync(
+                    $"document.getElementById(\"{escaped}\")?.scrollIntoView({{behavior:'smooth'}});");
+            }
+            else
+            {
+                _viewModel.NavigateToMarkdownFileByPath(localPath);
+            }
+        }
+        else if (uri.Scheme is "http" or "https")
+        {
+            Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
+        }
     }
 
     private void ShowWebView2RuntimeMissingDialog()
@@ -179,7 +224,17 @@ public partial class MainWindow : Window
             return;
         }
 
-        ContentView.NavigateToString(_viewModel.HtmlContent ?? string.Empty);
+        var html = _viewModel.HtmlContent ?? string.Empty;
+
+        // Inject a base URL so relative .md links and same-page #anchors resolve
+        // to the current file's path rather than about:blank.
+        if (_viewModel.SelectedNode is MarkdownFileNodeViewModel file)
+        {
+            var fileUri = new Uri(file.FullPath).AbsoluteUri;
+            html = html.Replace("<head>", $"<head>\n<base href=\"{fileUri}\">", StringComparison.Ordinal);
+        }
+
+        ContentView.NavigateToString(html);
     }
 
     private void DirectoryTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

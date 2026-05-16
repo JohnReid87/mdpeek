@@ -645,6 +645,16 @@ public partial class MainWindowViewModel : ObservableObject
         _fileIndex[file.FullPath] = file;
 
     /// <summary>
+    /// Selects the markdown file at <paramref name="fullPath"/> in the tree,
+    /// recording a history visit. Called from the UI when the user clicks an
+    /// internal .md hyperlink. Uses the same <see cref="ResolveFileViewModel"/>
+    /// path taken by Back/Forward navigation so that the tree highlight follows
+    /// when the file has already been loaded into the index.
+    /// </summary>
+    public void NavigateToMarkdownFileByPath(string fullPath) =>
+        SelectedNode = ResolveFileViewModel(fullPath);
+
+    /// <summary>
     /// Returns the live <see cref="MarkdownFileNodeViewModel"/> the tree
     /// already has for <paramref name="path"/>, or a fresh wrapper if the
     /// containing folder has not been loaded yet. Used by the navigation

@@ -110,4 +110,62 @@ public class FolderNodeTests
         fs.DidNotReceive().EnumerateDirectories("/r/sub");
         fs.DidNotReceive().EnumerateFiles("/r/sub", "*.md", SearchOption.TopDirectoryOnly);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void SetExpandedRecursive_SetsIsExpandedOnSelf(bool value)
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var node = new FolderNode("/r", fs) { IsExpanded = !value };
+
+        node.SetExpandedRecursive(value);
+
+        node.IsExpanded.Should().Be(value);
+    }
+
+    [Fact]
+    public void SetExpandedRecursive_DoesNotForceLoadChildren()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var node = new FolderNode("/r", fs);
+
+        node.SetExpandedRecursive(true);
+
+        fs.DidNotReceive().EnumerateDirectories(Arg.Any<string>());
+        fs.DidNotReceive().EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>());
+    }
+
+    [Fact]
+    public void SetExpandedRecursive_AppliesToAllLoadedDescendantFolders()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(new[] { "/r/a" });
+        fs.EnumerateDirectories("/r/a").Returns(new[] { "/r/a/b" });
+        fs.EnumerateDirectories("/r/a/b").Returns(Array.Empty<string>());
+        fs.EnumerateFiles(Arg.Any<string>(), "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var root = new FolderNode("/r", fs);
+        var a = (FolderNode)root.Children.Single();
+        var b = (FolderNode)a.Children.Single();
+
+        root.SetExpandedRecursive(true);
+
+        root.IsExpanded.Should().BeTrue();
+        a.IsExpanded.Should().BeTrue();
+        b.IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SetExpandedRecursive_DoesNotTouchUnloadedDescendants()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(new[] { "/r/a" });
+        fs.EnumerateFiles(Arg.Any<string>(), "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var root = new FolderNode("/r", fs);
+        _ = root.Children;
+
+        root.SetExpandedRecursive(true);
+
+        fs.DidNotReceive().EnumerateDirectories("/r/a");
+    }
 }

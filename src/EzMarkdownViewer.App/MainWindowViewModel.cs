@@ -655,6 +655,18 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ExpandAll()
+    {
+        RootNode?.SetExpandedRecursive(true);
+    }
+
+    [RelayCommand]
+    private void CollapseAll()
+    {
+        RootNode?.SetExpandedRecursive(false);
+    }
+
+    [RelayCommand]
     private void RegisterFileAssociation()
     {
         try

@@ -43,6 +43,24 @@ public sealed partial class FolderNode : DirectoryTreeNode
     [ObservableProperty]
     private bool _isExpanded;
 
+    /// <summary>
+    /// Sets <see cref="IsExpanded"/> on this folder and every already-loaded
+    /// descendant folder. Folders the user has not yet opened are left
+    /// untouched, so this operation does not trigger any disk reads.
+    /// </summary>
+    public void SetExpandedRecursive(bool isExpanded)
+    {
+        IsExpanded = isExpanded;
+        if (_children is null)
+        {
+            return;
+        }
+        foreach (var child in _children.OfType<FolderNode>())
+        {
+            child.SetExpandedRecursive(isExpanded);
+        }
+    }
+
     private IReadOnlyList<DirectoryTreeNode> LoadChildren()
     {
         var folders = _fileSystem.EnumerateDirectories(FullPath)

@@ -116,6 +116,22 @@
                                Text="No folder open. Use File &#x2192; Open Folder&#x2026; to begin." />
 
                     <DockPanel Visibility="{Binding HasFolderOpen, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel DockPanel.Dock="Top"
+                                    Orientation="Horizontal"
+                                    Margin="4,4,4,0">
+                            <Button Content="Expand all"
+                                    ToolTip="Expand all loaded folders"
+                                    AutomationProperties.Name="Expand All"
+                                    Command="{Binding ExpandAllCommand}"
+                                    Padding="6,2"
+                                    Margin="0,0,4,0" />
+                            <Button Content="Collapse all"
+                                    ToolTip="Collapse all folders"
+                                    AutomationProperties.Name="Collapse All"
+                                    Command="{Binding CollapseAllCommand}"
+                                    Padding="6,2" />
+                        </StackPanel>
+
                         <TextBox DockPanel.Dock="Top"
                                  x:Name="FilterBox"
                                  Margin="4"

@@ -1442,4 +1442,88 @@ public class MainWindowViewModelTests
         design.IsExpanded.Should().BeTrue();
         random.IsVisible.Should().BeFalse();
     }
+
+    [Fact]
+    public void ExpandAll_WhenNoFolderOpen_DoesNothing()
+    {
+        var vm = CreateViewModel();
+
+        vm.ExpandAllCommand.Execute(null);
+
+        vm.RootNode.Should().BeNull();
+    }
+
+    [Fact]
+    public void CollapseAll_WhenNoFolderOpen_DoesNothing()
+    {
+        var vm = CreateViewModel();
+
+        vm.CollapseAllCommand.Execute(null);
+
+        vm.RootNode.Should().BeNull();
+    }
+
+    [Fact]
+    public void ExpandAll_ExpandsRootAndAllLoadedDescendantFolders()
+    {
+        const string folder = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
+        _ = vm.RootNode!.Children.OfType<FolderNode>().Single().Children;
+
+        vm.ExpandAllCommand.Execute(null);
+
+        vm.RootNode!.IsExpanded.Should().BeTrue();
+        vm.RootNode.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
+    public void CollapseAll_CollapsesRootAndAllLoadedDescendantFolders()
+    {
+        const string folder = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(new[] { sub });
+        fs.EnumerateDirectories(sub).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings
+        {
+            LastFolder = folder,
+            ExpandedFolders = new List<string> { folder, sub },
+        });
+        vm.RootNode!.IsExpanded.Should().BeTrue();
+        vm.RootNode.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeTrue();
+
+        vm.CollapseAllCommand.Execute(null);
+
+        vm.RootNode!.IsExpanded.Should().BeFalse();
+        vm.RootNode.Children.OfType<FolderNode>().Single().IsExpanded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ExpandAll_DoesNotForceLoadUnopenedFolders()
+    {
+        const string folder = "C:\\notes";
+        const string sub = "C:\\notes\\design";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(new[] { sub });
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
+        _ = vm.RootNode!.Children;
+
+        vm.ExpandAllCommand.Execute(null);
+
+        fs.DidNotReceive().EnumerateDirectories(sub);
+        fs.DidNotReceive().EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>());
+    }
 }

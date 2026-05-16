@@ -10,7 +10,7 @@ Download the latest `mdpeek-<version>-win-x64.exe` from the [Releases page](http
 - Windows 10 (1809+) or Windows 11, x64.
 - WebView2 Evergreen Runtime — preinstalled on Windows 11 and pushed to Windows 10 via Windows Update. If missing, the app will prompt you with a [download link](https://developer.microsoft.com/microsoft-edge/webview2/).
 
-On first launch, Windows SmartScreen may warn that the publisher is unverified (the exe is not code-signed). Click **More info → Run anyway**.
+Windows will show a SmartScreen prompt on first run — this is expected for unsigned open-source builds. Click **More info → Run anyway**.
 
 ### Build from source
 

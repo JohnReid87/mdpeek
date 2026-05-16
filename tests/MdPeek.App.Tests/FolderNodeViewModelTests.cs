@@ -158,4 +158,159 @@ public class FolderNodeViewModelTests
 
         fs.DidNotReceive().EnumerateDirectories("/r/a");
     }
+
+    [Fact]
+    public void IsLoading_DefaultsToFalse()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        vm.IsLoading.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DisplayChildren_BeforeLoading_ContainsPlaceholder()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        vm.DisplayChildren.Should().ContainSingle()
+            .Which.Should().BeOfType<LoadingPlaceholderViewModel>();
+    }
+
+    [Fact]
+    public void DisplayChildren_PlaceholderDoesNotTriggerDiskRead()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        _ = vm.DisplayChildren;
+
+        fs.DidNotReceive().EnumerateDirectories(Arg.Any<string>());
+        fs.DidNotReceive().EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>());
+    }
+
+    [Fact]
+    public async Task LoadChildrenAsync_ReplacesPlaceholderWithWrappedChildren()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
+        fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(new[] { "/r/notes.md" });
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        await vm.LoadChildrenAsync();
+
+        vm.DisplayChildren.Should().HaveCount(2);
+        vm.DisplayChildren[0].Should().BeOfType<FolderNodeViewModel>();
+        vm.DisplayChildren[0].FullPath.Should().Be("/r/sub");
+        vm.DisplayChildren[1].Should().BeOfType<MarkdownFileNodeViewModel>();
+        vm.DisplayChildren[1].FullPath.Should().Be("/r/notes.md");
+    }
+
+    [Fact]
+    public async Task LoadChildrenAsync_TogglesIsLoading()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
+        fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var observed = new List<bool>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(FolderNodeViewModel.IsLoading))
+            {
+                observed.Add(vm.IsLoading);
+            }
+        };
+
+        await vm.LoadChildrenAsync();
+
+        observed.Should().Equal(true, false);
+        vm.IsLoading.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LoadChildrenAsync_PopulatesLoadedChildren()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
+        fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        await vm.LoadChildrenAsync();
+
+        vm.LoadedChildren.Should().NotBeNull();
+        vm.LoadedChildren!.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task LoadChildrenAsync_CalledTwice_OnlyEnumeratesOnce()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
+        fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        await vm.LoadChildrenAsync();
+        await vm.LoadChildrenAsync();
+
+        fs.Received(1).EnumerateDirectories("/r");
+    }
+
+    [Fact]
+    public async Task IsExpanded_FirstTimeTrue_TriggersBackgroundLoad()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
+        fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        vm.IsExpanded = true;
+        // Drain the load that OnIsExpandedChanged kicked off.
+        await vm.LoadChildrenAsync();
+
+        vm.LoadedChildren.Should().NotBeNull();
+        vm.DisplayChildren.Should().ContainSingle()
+            .Which.FullPath.Should().Be("/r/sub");
+    }
+
+    [Fact]
+    public void IsExpanded_FalseToFalse_DoesNotTriggerLoad()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        vm.IsExpanded = false;
+
+        vm.IsLoading.Should().BeFalse();
+        fs.DidNotReceive().EnumerateDirectories(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task IsExpanded_AfterLoadComplete_DoesNotReload()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
+        fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        await vm.LoadChildrenAsync();
+        vm.IsExpanded = true;
+
+        fs.Received(1).EnumerateDirectories("/r");
+    }
+
+    [Fact]
+    public void Children_SyncAccess_PopulatesDisplayChildren()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
+        fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        _ = vm.Children;
+
+        vm.DisplayChildren.Should().ContainSingle()
+            .Which.Should().BeOfType<FolderNodeViewModel>();
+    }
 }

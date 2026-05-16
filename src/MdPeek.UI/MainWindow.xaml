@@ -17,7 +17,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
         <HierarchicalDataTemplate DataType="{x:Type app:FolderNodeViewModel}"
-                                  ItemsSource="{Binding Children}">
+                                  ItemsSource="{Binding DisplayChildren}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                            Foreground="{DynamicResource Brush.Fg}"
@@ -45,8 +45,22 @@
                         </ContextMenu>
                     </TextBlock.ContextMenu>
                 </TextBlock>
+                <TextBlock Text="&#xE712;"
+                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           Foreground="{DynamicResource Brush.Fg}"
+                           Opacity="0.5"
+                           VerticalAlignment="Center"
+                           Margin="6,0,0,0"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
         </HierarchicalDataTemplate>
+
+        <DataTemplate DataType="{x:Type app:LoadingPlaceholderViewModel}">
+            <TextBlock Text="{Binding DisplayName}"
+                       FontStyle="Italic"
+                       Opacity="0.6"
+                       VerticalAlignment="Center" />
+        </DataTemplate>
 
         <DataTemplate DataType="{x:Type app:MarkdownFileNodeViewModel}">
             <StackPanel Orientation="Horizontal">

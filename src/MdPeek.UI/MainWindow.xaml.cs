@@ -148,14 +148,10 @@ public partial class MainWindow : Window
 
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
     {
-        // Allow the NavigateToString load itself (fires as about:blank).
-        if (e.Uri.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        e.Cancel = true;
-
+        // Only intercept the schemes we know how to handle. NavigateToString itself
+        // fires NavigationStarting with a data: URI for the rendered HTML, so the
+        // default must be "allow" — cancelling unknown schemes would kill our own
+        // content load.
         if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri))
         {
             return;
@@ -166,8 +162,11 @@ public partial class MainWindow : Window
             var localPath = uri.LocalPath; // decoded Windows path, e.g. C:\docs\file.md
             if (!localPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
             {
+                e.Cancel = true;
                 return;
             }
+
+            e.Cancel = true;
 
             var currentPath = (_viewModel.SelectedNode as MarkdownFileNodeViewModel)?.FullPath;
             if (!string.IsNullOrEmpty(uri.Fragment) &&
@@ -186,6 +185,7 @@ public partial class MainWindow : Window
         }
         else if (uri.Scheme is "http" or "https")
         {
+            e.Cancel = true;
             Process.Start(new ProcessStartInfo(e.Uri) { UseShellExecute = true });
         }
     }

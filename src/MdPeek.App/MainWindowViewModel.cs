@@ -23,6 +23,18 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly IUserNotification _userNotification;
     private readonly IFileAssociationRegistrar _fileAssociationRegistrar;
     private readonly NavigationHistory _history = new();
+    /// <summary>
+    /// Path → wrapper index for resolving an existing
+    /// <see cref="MarkdownFileNodeViewModel"/> from the live tree when
+    /// Back/Forward/<see cref="TryOpenFromPath"/> or settings restore need to
+    /// re-select a file by path. Without this index those paths would have to
+    /// allocate a stranger wrapper that is disconnected from the tree, so the
+    /// <c>TreeView</c> selection highlight would not follow. Populated by
+    /// <see cref="FolderNodeViewModel"/> as folder children are loaded;
+    /// cleared whenever the tree is re-rooted.
+    /// </summary>
+    private readonly Dictionary<string, MarkdownFileNodeViewModel> _fileIndex =
+        new(StringComparer.OrdinalIgnoreCase);
     private bool _navigatingHistory;
     private bool _filterApplied;
     private Dictionary<string, bool>? _preFilterExpansion;
@@ -406,7 +418,7 @@ public partial class MainWindowViewModel : ObservableObject
         _navigatingHistory = true;
         try
         {
-            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(selectedFilePath));
+            SelectedNode = ResolveFileViewModel(selectedFilePath);
         }
         finally
         {
@@ -443,7 +455,7 @@ public partial class MainWindowViewModel : ObservableObject
         _navigatingHistory = true;
         try
         {
-            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+            SelectedNode = ResolveFileViewModel(path);
         }
         finally
         {
@@ -497,7 +509,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         RootNode = CreateRoot(parent);
         WindowTitle = $"{RootNode.DisplayName} — {AppName}";
-        SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        SelectedNode = ResolveFileViewModel(path);
         return true;
     }
 
@@ -531,7 +543,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (settings.LastSelectedFile is not null && _fileSystem.FileExists(settings.LastSelectedFile))
         {
-            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(settings.LastSelectedFile));
+            SelectedNode = ResolveFileViewModel(settings.LastSelectedFile);
         }
     }
 
@@ -549,8 +561,27 @@ public partial class MainWindowViewModel : ObservableObject
             : CollectExpandedFolders(RootNode).ToList();
     }
 
-    private FolderNodeViewModel CreateRoot(string fullPath) =>
-        new(new FolderNode(fullPath, _fileSystem));
+    private FolderNodeViewModel CreateRoot(string fullPath)
+    {
+        _fileIndex.Clear();
+        return new FolderNodeViewModel(new FolderNode(fullPath, _fileSystem), RegisterFileInIndex);
+    }
+
+    private void RegisterFileInIndex(MarkdownFileNodeViewModel file) =>
+        _fileIndex[file.FullPath] = file;
+
+    /// <summary>
+    /// Returns the live <see cref="MarkdownFileNodeViewModel"/> the tree
+    /// already has for <paramref name="path"/>, or a fresh wrapper if the
+    /// containing folder has not been loaded yet. Used by the navigation
+    /// entry points so they re-select the existing tree wrapper rather than
+    /// allocating a stranger node that would not be tracked by the
+    /// <c>TreeView</c>.
+    /// </summary>
+    private MarkdownFileNodeViewModel ResolveFileViewModel(string path) =>
+        _fileIndex.TryGetValue(path, out var existing)
+            ? existing
+            : new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
 
     /// <summary>
     /// Returns the parent directory of <paramref name="path"/>, or <c>null</c>
@@ -671,7 +702,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (selectedFilePath is not null && _fileSystem.FileExists(selectedFilePath))
         {
-            SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(selectedFilePath));
+            SelectedNode = ResolveFileViewModel(selectedFilePath);
         }
         else
         {

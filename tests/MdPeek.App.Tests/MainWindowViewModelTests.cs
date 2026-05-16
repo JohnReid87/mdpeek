@@ -1656,4 +1656,88 @@ public class MainWindowViewModelTests
         fs.DidNotReceive().EnumerateDirectories(sub);
         fs.DidNotReceive().EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>());
     }
+
+    [Fact]
+    public void GoBack_AfterSelectingTreeWrappers_ResolvesToSameTreeWrapperInstance()
+    {
+        const string folder = "C:\\notes";
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
+            .Returns(new[] { a, b });
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.TryOpenFromPath(folder);
+
+        var children = vm.RootNode!.Children;
+        var aWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
+        var bWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == b);
+        vm.SelectedNode = aWrapper;
+        vm.SelectedNode = bWrapper;
+
+        vm.GoBackCommand.Execute(null);
+
+        vm.SelectedNode.Should().BeSameAs(aWrapper);
+    }
+
+    [Fact]
+    public void GoForward_AfterSelectingTreeWrappers_ResolvesToSameTreeWrapperInstance()
+    {
+        const string folder = "C:\\notes";
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
+            .Returns(new[] { a, b });
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.TryOpenFromPath(folder);
+        var children = vm.RootNode!.Children;
+        var aWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
+        var bWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == b);
+        vm.SelectedNode = aWrapper;
+        vm.SelectedNode = bWrapper;
+        vm.GoBackCommand.Execute(null);
+
+        vm.GoForwardCommand.Execute(null);
+
+        vm.SelectedNode.Should().BeSameAs(bWrapper);
+    }
+
+    [Fact]
+    public void Refresh_RebuildsFileIndexSoBackResolvesNewTreeWrapper()
+    {
+        const string folder = "C:\\notes";
+        const string a = "C:\\notes\\a.md";
+        const string b = "C:\\notes\\b.md";
+        var fs = CreateRenderingFileSystem(a, b);
+        fs.DirectoryExists(folder).Returns(true);
+        fs.EnumerateDirectories(folder).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>())
+            .Returns(new[] { a, b });
+        var renderer = Substitute.For<IMarkdownRenderer>();
+        renderer.Render(Arg.Any<string>()).Returns("<html/>");
+        var vm = CreateViewModel(fs: fs, renderer: renderer);
+        vm.TryOpenFromPath(folder);
+        var firstChildren = vm.RootNode!.Children;
+        var firstAWrapper = firstChildren.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
+        var firstBWrapper = firstChildren.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == b);
+        vm.SelectedNode = firstAWrapper;
+        vm.SelectedNode = firstBWrapper;
+
+        vm.RefreshCommand.Execute(null);
+        var newChildren = vm.RootNode!.Children;
+        var newAWrapper = newChildren.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
+        vm.GoBackCommand.Execute(null);
+
+        vm.SelectedNode.Should().BeSameAs(newAWrapper);
+        vm.SelectedNode.Should().NotBeSameAs(firstAWrapper);
+    }
 }

@@ -38,15 +38,4 @@ public abstract partial class DirectoryTreeNodeViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _isSelected;
-
-    /// <summary>
-    /// Returns a view-model that wraps <paramref name="node"/>, picking the
-    /// concrete subclass that matches the node's runtime type.
-    /// </summary>
-    public static DirectoryTreeNodeViewModel Wrap(DirectoryTreeNode node) => node switch
-    {
-        FolderNode folder => new FolderNodeViewModel(folder),
-        MarkdownFileNode file => new MarkdownFileNodeViewModel(file),
-        _ => throw new InvalidOperationException($"Unsupported node type '{node.GetType()}'.")
-    };
 }

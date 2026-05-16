@@ -20,19 +20,33 @@ public sealed partial class FolderNodeViewModel : DirectoryTreeNodeViewModel
 {
     private readonly FolderNode _folder;
     private readonly ObservableCollection<DirectoryTreeNodeViewModel> _displayChildren;
+    private readonly Action<MarkdownFileNodeViewModel>? _registerFile;
     private IReadOnlyList<DirectoryTreeNodeViewModel>? _children;
     private Task? _loadTask;
     private bool _suppressAutoLoad;
 
-    public FolderNodeViewModel(FolderNode folder)
+    public FolderNodeViewModel(FolderNode folder, Action<MarkdownFileNodeViewModel>? registerFile = null)
         : base(folder)
     {
         _folder = folder;
+        _registerFile = registerFile;
         _displayChildren = new ObservableCollection<DirectoryTreeNodeViewModel>
         {
             LoadingPlaceholderViewModel.Instance,
         };
     }
+
+    /// <summary>
+    /// Wraps <paramref name="node"/> in the matching view-model subclass,
+    /// propagating the file-index register callback so a freshly-wrapped
+    /// subfolder will register its file descendants too as they load.
+    /// </summary>
+    private DirectoryTreeNodeViewModel Wrap(DirectoryTreeNode node) => node switch
+    {
+        FolderNode folder => new FolderNodeViewModel(folder, _registerFile),
+        MarkdownFileNode file => new MarkdownFileNodeViewModel(file),
+        _ => throw new InvalidOperationException($"Unsupported node type '{node.GetType()}'."),
+    };
 
     public FolderNode Folder => _folder;
 
@@ -145,6 +159,10 @@ public sealed partial class FolderNodeViewModel : DirectoryTreeNodeViewModel
         _displayChildren.Clear();
         foreach (var child in wrapped)
         {
+            if (child is MarkdownFileNodeViewModel file)
+            {
+                _registerFile?.Invoke(file);
+            }
             _displayChildren.Add(child);
         }
     }

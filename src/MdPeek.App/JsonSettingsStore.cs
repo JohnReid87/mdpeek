@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace MdPeek.App;
@@ -38,6 +39,7 @@ public sealed class JsonSettingsStore : ISettingsStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
+            Trace.WriteLine($"[JsonSettingsStore] Failed to load settings from '{_filePath}': {ex}");
             return new AppSettings();
         }
     }
@@ -58,6 +60,7 @@ public sealed class JsonSettingsStore : ISettingsStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Trace.WriteLine($"[JsonSettingsStore] Failed to save settings to '{_filePath}': {ex}");
         }
     }
 }

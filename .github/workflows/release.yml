@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version to publish (without leading v), e.g. 0.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $version = $env:GITHUB_REF_NAME -replace '^v',''
+          } else {
+            $version = '${{ inputs.version }}'
+          }
+          if ([string]::IsNullOrWhiteSpace($version)) { throw 'Could not resolve version.' }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Resolved version: $version"
+
+      - name: Restore
+        run: dotnet restore EzMarkdownViewer.slnx
+
+      - name: Test
+        run: dotnet test EzMarkdownViewer.slnx -c Release --no-restore
+
+      - name: Publish
+        shell: pwsh
+        run: ./scripts/publish.ps1 -Version '${{ steps.version.outputs.version }}'
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $tag = "v$version"
+          $exe = "artifacts/EzMarkdownViewer-$version-win-x64.exe"
+          $sha = "$exe.sha256"
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            gh release create $tag $exe $sha --title $tag --generate-notes --target $env:GITHUB_SHA
+          } else {
+            gh release create $tag $exe $sha --title $tag --generate-notes
+          }

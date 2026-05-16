@@ -16,6 +16,14 @@ public class MarkdownFileNodeViewModelTests
     }
 
     [Fact]
+    public void IsSelected_DefaultsToFalse()
+    {
+        var vm = new MarkdownFileNodeViewModel(new MarkdownFileNode("C:\\docs\\notes.md"));
+
+        vm.IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
     public void File_ExposesWrappedCoreNode()
     {
         var file = new MarkdownFileNode("C:\\docs\\notes.md");

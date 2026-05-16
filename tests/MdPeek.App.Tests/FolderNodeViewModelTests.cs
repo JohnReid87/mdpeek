@@ -28,6 +28,15 @@ public class FolderNodeViewModelTests
     }
 
     [Fact]
+    public void IsSelected_DefaultsToFalse()
+    {
+        var fs = Substitute.For<IFileSystem>();
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+
+        vm.IsSelected.Should().BeFalse();
+    }
+
+    [Fact]
     public void Children_WrapsCoreChildren()
     {
         var fs = Substitute.For<IFileSystem>();

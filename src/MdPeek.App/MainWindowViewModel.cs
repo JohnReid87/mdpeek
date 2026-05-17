@@ -73,6 +73,9 @@ public partial class MainWindowViewModel : ObservableObject
     private string? _htmlContent;
 
     [ObservableProperty]
+    private bool _isLoadingFile;
+
+    [ObservableProperty]
     private string _filterText = string.Empty;
 
     [ObservableProperty]
@@ -133,6 +136,7 @@ public partial class MainWindowViewModel : ObservableObject
             _loadCts?.Cancel();
             _loadCts = new CancellationTokenSource();
             var recordHistory = !_navigatingHistory;
+            IsLoadingFile = true;
             _loadTask = LoadFileAsync(file.File, recordHistory, _loadCts.Token);
         }
     }
@@ -326,100 +330,107 @@ public partial class MainWindowViewModel : ObservableObject
 
     private async Task LoadFileAsync(MarkdownFileNode file, bool recordHistory, CancellationToken cancellationToken)
     {
-        var path = file.FullPath;
-
-        if (!_fileSystem.FileExists(path))
-        {
-            HtmlContent = _markdownRenderer.RenderError(
-                "File not found",
-                $"The file '{path}' could not be found. It may have been moved, renamed, or deleted since the folder was opened.");
-            RecordHistoryVisit(recordHistory, path);
-            return;
-        }
-
-        long size;
         try
         {
-            size = _fileSystem.GetFileSizeBytes(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            HtmlContent = _markdownRenderer.RenderError(
-                "Could not read file",
-                $"The file '{path}' could not be opened: {ex.Message}");
-            RecordHistoryVisit(recordHistory, path);
-            return;
-        }
+            var path = file.FullPath;
 
-        if (size > LargeFileThresholdBytes)
-        {
-            var sizeMb = size / (double)(1024 * 1024);
-            var confirmed = _userConfirmation.Confirm(
-                "Large file",
-                $"'{file.DisplayName}' is {sizeMb:F1} MB. Rendering large markdown documents can be slow. Continue?");
+            if (!_fileSystem.FileExists(path))
+            {
+                HtmlContent = _markdownRenderer.RenderError(
+                    "File not found",
+                    $"The file '{path}' could not be found. It may have been moved, renamed, or deleted since the folder was opened.");
+                RecordHistoryVisit(recordHistory, path);
+                return;
+            }
 
-            if (!confirmed)
+            long size;
+            try
+            {
+                size = _fileSystem.GetFileSizeBytes(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                HtmlContent = _markdownRenderer.RenderError(
+                    "Could not read file",
+                    $"The file '{path}' could not be opened: {ex.Message}");
+                RecordHistoryVisit(recordHistory, path);
+                return;
+            }
+
+            if (size > LargeFileThresholdBytes)
+            {
+                var sizeMb = size / (double)(1024 * 1024);
+                var confirmed = _userConfirmation.Confirm(
+                    "Large file",
+                    $"'{file.DisplayName}' is {sizeMb:F1} MB. Rendering large markdown documents can be slow. Continue?");
+
+                if (!confirmed)
+                {
+                    return;
+                }
+            }
+
+            string text;
+            try
+            {
+                text = await _fileSystem.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
             {
                 return;
             }
-        }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                HtmlContent = _markdownRenderer.RenderError(
+                    "Could not read file",
+                    $"The file '{path}' could not be opened: {ex.Message}");
+                RecordHistoryVisit(recordHistory, path);
+                return;
+            }
 
-        string text;
-        try
-        {
-            text = await _fileSystem.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(true);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
             if (cancellationToken.IsCancellationRequested)
             {
                 return;
             }
-            HtmlContent = _markdownRenderer.RenderError(
-                "Could not read file",
-                $"The file '{path}' could not be opened: {ex.Message}");
-            RecordHistoryVisit(recordHistory, path);
-            return;
-        }
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
+            string html;
+            try
+            {
+                html = await _markdownRenderer.RenderAsync(text, cancellationToken).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                HtmlContent = _markdownRenderer.RenderError(
+                    "Could not render markdown",
+                    $"The file '{path}' could not be rendered as markdown: {ex.Message}");
+                RecordHistoryVisit(recordHistory, path);
+                return;
+            }
 
-        string html;
-        try
-        {
-            html = await _markdownRenderer.RenderAsync(text, cancellationToken).ConfigureAwait(true);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-        catch (Exception ex)
-        {
             if (cancellationToken.IsCancellationRequested)
             {
                 return;
             }
-            HtmlContent = _markdownRenderer.RenderError(
-                "Could not render markdown",
-                $"The file '{path}' could not be rendered as markdown: {ex.Message}");
+
+            HtmlContent = html;
             RecordHistoryVisit(recordHistory, path);
-            return;
         }
-
-        if (cancellationToken.IsCancellationRequested)
+        finally
         {
-            return;
+            IsLoadingFile = false;
         }
-
-        HtmlContent = html;
-        RecordHistoryVisit(recordHistory, path);
     }
 
     private void RecordHistoryVisit(bool recordHistory, string path)

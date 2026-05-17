@@ -551,6 +551,8 @@ public partial class MainWindowViewModel : ObservableObject
     private void NavigateToHistoryEntry(string path)
     {
         HistoryNavigationStarting?.Invoke(this, EventArgs.Empty);
+        if (RootNode is not null)
+            ExpandToFile(RootNode, path);
         _navigatingHistory = true;
         try
         {
@@ -606,8 +608,10 @@ public partial class MainWindowViewModel : ObservableObject
         OnHistoryChanged();
         FilterText = string.Empty;
 
-        RootNode = CreateRoot(parent);
-        WindowTitle = $"{RootNode.DisplayName} — {AppName}";
+        var newRoot = CreateRoot(parent);
+        RootNode = newRoot;
+        WindowTitle = $"{newRoot.DisplayName} — {AppName}";
+        ExpandToFile(newRoot, path);
         SelectedNode = ResolveFileViewModel(path);
         return true;
     }
@@ -642,6 +646,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (settings.LastSelectedFile is not null && _fileSystem.FileExists(settings.LastSelectedFile))
         {
+            ExpandToFile(root, settings.LastSelectedFile);
             SelectedNode = ResolveFileViewModel(settings.LastSelectedFile);
         }
     }
@@ -811,6 +816,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         if (selectedFilePath is not null && _fileSystem.FileExists(selectedFilePath))
         {
+            ExpandToFile(newRoot, selectedFilePath);
             SelectedNode = ResolveFileViewModel(selectedFilePath);
         }
         else

@@ -20,14 +20,18 @@ internal static class DarkTitleBar
         ref int value,
         int valueSize);
 
-    public static void Apply(Window window)
+    /// <param name="window">The WPF window whose title bar to update.</param>
+    /// <param name="isDark">
+    /// <c>true</c> to request the OS-drawn dark caption; <c>false</c> for light.
+    /// </param>
+    public static void Apply(Window window, bool isDark)
     {
         var hwnd = new WindowInteropHelper(window).EnsureHandle();
-        int useDarkMode = 1;
+        int value = isDark ? 1 : 0;
         _ = DwmSetWindowAttribute(
             hwnd,
             DWMWA_USE_IMMERSIVE_DARK_MODE,
-            ref useDarkMode,
+            ref value,
             sizeof(int));
     }
 }

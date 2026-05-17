@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\dark.css" />
+    <EmbeddedResource Include="Resources\light.css" />
   </ItemGroup>
 
 </Project>

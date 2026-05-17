@@ -3,8 +3,16 @@ namespace MdPeek.Core;
 public interface IMarkdownRenderer
 {
     /// <summary>
+    /// Controls which embedded stylesheet is applied to rendered output.
+    /// <c>true</c> (the default) uses <c>dark.css</c>; <c>false</c> uses
+    /// <c>light.css</c>. Set this before calling <see cref="RenderAsync"/>
+    /// or <see cref="RenderError"/> to apply the desired theme.
+    /// </summary>
+    bool IsDarkTheme { get; set; }
+
+    /// <summary>
     /// Renders a markdown document to a complete HTML document with the
-    /// embedded dark stylesheet applied, on a background thread. The result
+    /// embedded stylesheet applied, on a background thread. The result
     /// is suitable for passing directly to a browser host such as
     /// WebView2's NavigateToString.
     /// </summary>
@@ -16,7 +24,7 @@ public interface IMarkdownRenderer
 
     /// <summary>
     /// Renders an in-pane error message as a complete HTML document with
-    /// the embedded dark stylesheet applied. Used to surface failures
+    /// the embedded stylesheet applied. Used to surface failures
     /// (missing file, IO error, parse failure) in the content pane in the
     /// same visual style as a rendered document.
     /// </summary>

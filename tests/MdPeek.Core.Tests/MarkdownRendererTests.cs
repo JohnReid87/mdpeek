@@ -31,6 +31,29 @@ public class MarkdownRendererTests
         result.Should().Contain("background-color: var(--bg)");
     }
 
+    [Fact]
+    public async Task RenderAsync_WhenIsDarkThemeIsFalse_AppliesLightTheme()
+    {
+        _sut.IsDarkTheme = false;
+
+        var result = await _sut.RenderAsync(string.Empty, CancellationToken.None);
+
+        result.Should().Contain("--bg: #ffffff");
+        result.Should().Contain("background-color: var(--bg)");
+        result.Should().NotContain("--bg: #0d1117");
+    }
+
+    [Fact]
+    public void RenderError_WhenIsDarkThemeIsFalse_AppliesLightTheme()
+    {
+        _sut.IsDarkTheme = false;
+
+        var result = _sut.RenderError("Not found", "File gone.");
+
+        result.Should().Contain("--bg: #ffffff");
+        result.Should().NotContain("--bg: #0d1117");
+    }
+
     [Theory]
     [InlineData("# Heading 1", "<h1")]
     [InlineData("## Heading 2", "<h2")]

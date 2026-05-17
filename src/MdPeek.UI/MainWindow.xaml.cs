@@ -50,7 +50,24 @@ public partial class MainWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        DarkTitleBar.Apply(this);
+        ApplyTheme(WindowsTheme.IsAppDarkMode());
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+    }
+
+    private void OnUserPreferenceChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        // UserPreferenceCategory.General fires when the user switches between
+        // dark and light app mode in Windows Settings → Personalisation → Colours.
+        if (e.Category == Microsoft.Win32.UserPreferenceCategory.General)
+        {
+            ApplyTheme(WindowsTheme.IsAppDarkMode());
+        }
+    }
+
+    private void ApplyTheme(bool isDark)
+    {
+        _viewModel.IsDarkTheme = isDark;
+        DarkTitleBar.Apply(this, isDark);
     }
 
     // Standard 5-button-mouse convention: XButton1 = Back, XButton2 = Forward.
@@ -106,6 +123,7 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         var settings = new AppSettings();
 
         if (WindowState == WindowState.Maximized)

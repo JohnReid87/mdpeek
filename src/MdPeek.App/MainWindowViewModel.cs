@@ -75,6 +75,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _filterText = string.Empty;
 
+    [ObservableProperty]
+    private bool _isDarkTheme = true;
+
     public MainWindowViewModel(
         IFolderPicker folderPicker,
         IFileSystem fileSystem,
@@ -145,6 +148,21 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnFilterTextChanged(string value)
     {
         ApplyFilter();
+    }
+
+    partial void OnIsDarkThemeChanged(bool value)
+    {
+        _markdownRenderer.IsDarkTheme = value;
+
+        // Re-render the open file so the theme switch is visible immediately
+        // without the user having to re-select it. Pass recordHistory: false
+        // so the theme change does not pollute the navigation stack.
+        if (SelectedNode is MarkdownFileNodeViewModel file)
+        {
+            _loadCts?.Cancel();
+            _loadCts = new CancellationTokenSource();
+            _loadTask = LoadFileAsync(file.File, false, _loadCts.Token);
+        }
     }
 
     partial void OnRootNodeChanged(FolderNodeViewModel? value)

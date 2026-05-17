@@ -18,7 +18,7 @@ public partial class AboutWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        DarkTitleBar.Apply(this);
+        DarkTitleBar.Apply(this, WindowsTheme.IsAppDarkMode());
     }
 
     private void RepoLink_RequestNavigate(object sender, RequestNavigateEventArgs e)

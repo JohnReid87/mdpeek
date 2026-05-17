@@ -6,10 +6,15 @@ namespace MdPeek.Core;
 
 public sealed class MarkdownRenderer : IMarkdownRenderer
 {
-    private const string StylesheetResourceName = "MdPeek.Core.Resources.dark.css";
+    private const string DarkStylesheetResourceName = "MdPeek.Core.Resources.dark.css";
+    private const string LightStylesheetResourceName = "MdPeek.Core.Resources.light.css";
 
     private readonly MarkdownPipeline _pipeline;
-    private readonly string _stylesheet;
+    private readonly string _darkStylesheet;
+    private readonly string _lightStylesheet;
+
+    /// <inheritdoc />
+    public bool IsDarkTheme { get; set; } = true;
 
     public MarkdownRenderer()
     {
@@ -17,7 +22,8 @@ public sealed class MarkdownRenderer : IMarkdownRenderer
             .UseAdvancedExtensions()
             .Build();
 
-        _stylesheet = LoadEmbeddedStylesheet();
+        _darkStylesheet = LoadEmbeddedStylesheet(DarkStylesheetResourceName);
+        _lightStylesheet = LoadEmbeddedStylesheet(LightStylesheetResourceName);
     }
 
     /// <inheritdoc />
@@ -50,7 +56,7 @@ public sealed class MarkdownRenderer : IMarkdownRenderer
         <head>
         <meta charset="utf-8">
         <style>
-        {_stylesheet}
+        {(IsDarkTheme ? _darkStylesheet : _lightStylesheet)}
         </style>
         </head>
         <body>
@@ -59,13 +65,13 @@ public sealed class MarkdownRenderer : IMarkdownRenderer
         </html>
         """;
 
-    private static string LoadEmbeddedStylesheet()
+    private static string LoadEmbeddedStylesheet(string resourceName)
     {
         var assembly = typeof(MarkdownRenderer).Assembly;
 
-        using var stream = assembly.GetManifestResourceStream(StylesheetResourceName)
+        using var stream = assembly.GetManifestResourceStream(resourceName)
             ?? throw new InvalidOperationException(
-                $"Embedded resource '{StylesheetResourceName}' was not found in {assembly.GetName().Name}.");
+                $"Embedded resource '{resourceName}' was not found in {assembly.GetName().Name}.");
 
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();

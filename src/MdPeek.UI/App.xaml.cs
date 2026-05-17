@@ -37,6 +37,7 @@ public partial class App : Application
         services.AddSingleton<IFileSystem, FileSystem>();
         services.AddSingleton<IDocumentRenderer, MarkdownRenderer>();
         services.AddSingleton<IDocumentRenderer, PlainTextRenderer>();
+        services.AddSingleton<IDocumentRenderer, JsonRenderer>();
         services.AddSingleton<IDocumentRendererFactory>(sp =>
             new DocumentRendererFactory(sp.GetServices<IDocumentRenderer>()));
         services.AddSingleton<IFolderPicker, WpfFolderPicker>();

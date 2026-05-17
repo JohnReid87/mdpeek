@@ -153,3 +153,10 @@ img {
     border-bottom: none;
     font-size: 1.2em;
 }
+
+.json-key         { color: #0550ae; }
+.json-string      { color: #116329; }
+.json-number      { color: #953800; }
+.json-bool        { color: #cf222e; }
+.json-null        { color: #57606a; }
+.json-punctuation { color: var(--fg-muted); }

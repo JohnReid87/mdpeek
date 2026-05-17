@@ -475,10 +475,20 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        var expandedFolders = new HashSet<string>(
+            CollectExpandedFolders(RootNode!),
+            StringComparer.OrdinalIgnoreCase);
+
         FilterText = string.Empty;
 
-        RootNode = CreateRoot(folder.FullPath);
-        WindowTitle = $"{RootNode.DisplayName} — {AppName}";
+        var newRoot = CreateRoot(folder.FullPath);
+        RootNode = newRoot;
+        WindowTitle = $"{newRoot.DisplayName} — {AppName}";
+
+        if (expandedFolders.Count > 0)
+        {
+            ApplyExpansion(newRoot, expandedFolders);
+        }
     }
 
     private bool CanSetAsRoot(FolderNodeViewModel? folder) =>

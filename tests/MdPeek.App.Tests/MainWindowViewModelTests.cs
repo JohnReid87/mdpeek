@@ -1646,6 +1646,35 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public void SetAsRoot_RestoresExpansionStateOfDescendantFolders()
+    {
+        const string root = "C:\\docs";
+        const string guides = "C:\\docs\\guides";
+        const string beginner = "C:\\docs\\guides\\beginner";
+        var fs = Substitute.For<IFileSystem>();
+        fs.DirectoryExists(root).Returns(true);
+        fs.DirectoryExists(guides).Returns(true);
+        fs.DirectoryExists(beginner).Returns(true);
+        fs.EnumerateDirectories(root).Returns(new[] { guides });
+        fs.EnumerateDirectories(guides).Returns(new[] { beginner });
+        fs.EnumerateDirectories(beginner).Returns(Array.Empty<string>());
+        fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
+        var vm = CreateViewModel(fs: fs);
+        vm.TryOpenFromPath(root);
+        vm.RootNode!.IsExpanded = true;
+        var guidesVm = vm.RootNode.Children.OfType<FolderNodeViewModel>().Single();
+        guidesVm.IsExpanded = true;
+        var beginnerVm = guidesVm.Children.OfType<FolderNodeViewModel>().Single();
+        beginnerVm.IsExpanded = true;
+
+        vm.SetAsRootCommand.Execute(guidesVm);
+
+        vm.RootNode!.FullPath.Should().Be(guides);
+        vm.RootNode.IsExpanded.Should().BeTrue();
+        vm.RootNode.Children.OfType<FolderNodeViewModel>().Single().IsExpanded.Should().BeTrue();
+    }
+
+    [Fact]
     public void Refresh_PreservesFilterTextAndReappliesToRebuiltTree()
     {
         var fs = CreateFilterTreeFileSystem();

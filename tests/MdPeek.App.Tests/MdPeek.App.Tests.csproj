@@ -18,6 +18,12 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="MdPeek.Core.IO" />
+    <Using Include="MdPeek.Core.Rendering" />
+    <Using Include="MdPeek.App.Abstractions" />
+    <Using Include="MdPeek.App.Navigation" />
+    <Using Include="MdPeek.App.Settings" />
+    <Using Include="MdPeek.App.ViewModels" />
   </ItemGroup>
 
   <ItemGroup>

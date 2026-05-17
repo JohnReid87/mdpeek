@@ -2,8 +2,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 
-using MdPeek.App;
-using MdPeek.Core;
 
 using Microsoft.Extensions.DependencyInjection;
 

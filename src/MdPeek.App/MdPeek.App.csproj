@@ -12,6 +12,15 @@
     <InternalsVisibleTo Include="MdPeek.App.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="MdPeek.Core.IO" />
+    <Using Include="MdPeek.Core.Rendering" />
+    <Using Include="MdPeek.App.Abstractions" />
+    <Using Include="MdPeek.App.Navigation" />
+    <Using Include="MdPeek.App.Settings" />
+    <Using Include="MdPeek.App.ViewModels" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

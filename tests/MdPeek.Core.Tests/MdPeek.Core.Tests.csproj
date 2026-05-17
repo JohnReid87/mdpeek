@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="MdPeek.Core.IO" />
+    <Using Include="MdPeek.Core.Rendering" />
   </ItemGroup>
 
   <ItemGroup>

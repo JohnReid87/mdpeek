@@ -37,6 +37,14 @@ public interface IFileSystem
     Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Reads the raw bytes of the file at <paramref name="path"/> on a
+    /// background thread, observing <paramref name="cancellationToken"/> for
+    /// cooperative cancellation. Used by renderers that need to detect
+    /// encoding from a BOM before decoding.
+    /// </summary>
+    Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Writes <paramref name="contents"/> to the file at <paramref name="path"/>
     /// on a background thread, observing
     /// <paramref name="cancellationToken"/> for cooperative cancellation.

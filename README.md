@@ -1,6 +1,8 @@
 # mdpeek
 
-A lightweight Windows desktop app for reading local markdown files. Point it at a folder, browse the directory tree, and view rendered `.md` files side-by-side — no server, no setup, no editor required.
+A lightweight Windows desktop app for reading local documentation files. Point it at a folder, browse the directory tree, and view rendered content side-by-side — no server, no setup, no editor required.
+
+**Supported formats:** `.md` (rendered Markdown) · `.txt` (plain text) · `.json` (formatted JSON) · `.pdf` (WebView2 built-in PDF viewer)
 
 ## Get the app
 

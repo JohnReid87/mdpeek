@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private double? _pendingScrollRestore;
     private string? _pendingAnchorFragment;
     private bool _awaitingHistoryNavigation;
+    private string? _programmaticNavigationUri;
 
     public MainWindow(
         MainWindowViewModel viewModel,
@@ -186,6 +187,14 @@ public partial class MainWindow : Window
 
         if (uri.Scheme == "file")
         {
+            // Programmatic Navigate() calls (e.g. PdfRenderer) must be allowed through.
+            if (_programmaticNavigationUri != null &&
+                string.Equals(e.Uri, _programmaticNavigationUri, StringComparison.OrdinalIgnoreCase))
+            {
+                _programmaticNavigationUri = null;
+                return;
+            }
+
             var localPath = uri.LocalPath; // decoded Windows path, e.g. C:\docs\file.md
             if (!localPath.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
             {
@@ -296,6 +305,7 @@ public partial class MainWindow : Window
                 _pendingScrollRestore = null;
                 _renderedPath = null;
                 _awaitingHistoryNavigation = false;
+                _programmaticNavigationUri = navigateResult.Target.AbsoluteUri;
                 ContentView.CoreWebView2.Navigate(navigateResult.Target.AbsoluteUri);
                 break;
 

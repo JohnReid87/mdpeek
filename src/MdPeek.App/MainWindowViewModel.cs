@@ -167,6 +167,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnRootNodeChanged(FolderNodeViewModel? value)
     {
+        // Discard any stale selection from the previous tree before wiring
+        // the new one. Call sites that want to restore a selection do so
+        // explicitly after setting RootNode, so this is always safe.
+        SelectedNode = null;
+
         // A new tree has no filter state to clear — only re-apply the filter
         // if it is currently non-empty (e.g. after Refresh rebuilds the tree).
         _filterApplied = false;

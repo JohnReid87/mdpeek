@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 
 using MdPeek.App;
+using MdPeek.Core;
 
 using Microsoft.Web.WebView2.Core;
 
@@ -169,7 +170,7 @@ public partial class MainWindow : Window
         ContentView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
         _viewModel.HistoryNavigationStarting += OnHistoryNavigationStarting;
         _webViewReady = true;
-        await RenderCurrentHtml();
+        await HandleRenderContent();
     }
 
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
@@ -241,13 +242,13 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainWindowViewModel.HtmlContent))
+        if (e.PropertyName == nameof(MainWindowViewModel.RenderContent))
         {
-            _ = RenderCurrentHtml();
+            _ = HandleRenderContent();
         }
     }
 
-    private async Task RenderCurrentHtml()
+    private async Task HandleRenderContent()
     {
         if (!_webViewReady)
         {
@@ -264,28 +265,47 @@ public partial class MainWindow : Window
             }
         }
 
-        var html = _viewModel.HtmlContent ?? string.Empty;
-
-        // Inject a base URL so relative .md links and same-page #anchors resolve
-        // to the current file's path rather than about:blank.
-        if (_viewModel.SelectedNode is MarkdownFileNodeViewModel file)
+        switch (_viewModel.RenderContent)
         {
-            var fileUri = new Uri(file.FullPath).AbsoluteUri;
-            html = html.Replace("<head>", $"<head>\n<base href=\"{fileUri}\">", StringComparison.Ordinal);
+            case RenderResult.Html htmlResult:
+                var html = htmlResult.Content;
 
-            _pendingScrollRestore = (_awaitingHistoryNavigation && _scrollPositions.TryGetValue(file.FullPath, out var storedY))
-                ? storedY
-                : null;
-            _renderedPath = file.FullPath;
-        }
-        else
-        {
-            _pendingScrollRestore = null;
-            _renderedPath = null;
-        }
+                // Inject a base URL so relative links and same-page #anchors resolve
+                // to the current file's path rather than about:blank.
+                if (_viewModel.SelectedNode is MarkdownFileNodeViewModel file)
+                {
+                    var fileUri = new Uri(file.FullPath).AbsoluteUri;
+                    html = html.Replace("<head>", $"<head>\n<base href=\"{fileUri}\">", StringComparison.Ordinal);
 
-        _awaitingHistoryNavigation = false;
-        ContentView.NavigateToString(html);
+                    _pendingScrollRestore = (_awaitingHistoryNavigation && _scrollPositions.TryGetValue(file.FullPath, out var storedY))
+                        ? storedY
+                        : null;
+                    _renderedPath = file.FullPath;
+                }
+                else
+                {
+                    _pendingScrollRestore = null;
+                    _renderedPath = null;
+                }
+
+                _awaitingHistoryNavigation = false;
+                ContentView.NavigateToString(html);
+                break;
+
+            case RenderResult.Navigate navigateResult:
+                _pendingScrollRestore = null;
+                _renderedPath = null;
+                _awaitingHistoryNavigation = false;
+                ContentView.CoreWebView2.Navigate(navigateResult.Target.AbsoluteUri);
+                break;
+
+            default:
+                _pendingScrollRestore = null;
+                _renderedPath = null;
+                _awaitingHistoryNavigation = false;
+                ContentView.NavigateToString(string.Empty);
+                break;
+        }
     }
 
     private void OnHistoryNavigationStarting(object? sender, EventArgs e)

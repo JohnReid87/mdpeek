@@ -4,20 +4,28 @@ using Markdig;
 
 namespace MdPeek.Core;
 
-public sealed class MarkdownRenderer : IMarkdownRenderer
+public sealed class MarkdownRenderer : IDocumentRenderer
 {
+    private static readonly IReadOnlyList<string> _supportedExtensions = [".md"];
+
     private const string DarkStylesheetResourceName = "MdPeek.Core.Resources.dark.css";
     private const string LightStylesheetResourceName = "MdPeek.Core.Resources.light.css";
 
     private readonly MarkdownPipeline _pipeline;
+    private readonly IFileSystem _fileSystem;
     private readonly string _darkStylesheet;
     private readonly string _lightStylesheet;
 
     /// <inheritdoc />
     public bool IsDarkTheme { get; set; } = true;
 
-    public MarkdownRenderer()
+    /// <inheritdoc />
+    public IReadOnlyList<string> SupportedExtensions => _supportedExtensions;
+
+    public MarkdownRenderer(IFileSystem fileSystem)
     {
+        _fileSystem = fileSystem;
+
         _pipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
             .Build();
@@ -27,17 +35,23 @@ public sealed class MarkdownRenderer : IMarkdownRenderer
     }
 
     /// <inheritdoc />
-    public Task<string> RenderAsync(string markdown, CancellationToken cancellationToken) =>
-        Task.Run(() =>
+    public async Task<RenderResult> RenderAsync(string filePath, CancellationToken cancellationToken)
+    {
+        var markdown = await _fileSystem.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
+
+        var html = await Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
             var body = Markdown.ToHtml(markdown, _pipeline);
             cancellationToken.ThrowIfCancellationRequested();
             return WrapInDocument(body);
-        }, cancellationToken);
+        }, cancellationToken).ConfigureAwait(false);
+
+        return new RenderResult.Html(html);
+    }
 
     /// <inheritdoc />
-    public string RenderError(string title, string detail)
+    public RenderResult RenderError(string title, string detail)
     {
         var body = $"""
             <div class="error">
@@ -46,7 +60,7 @@ public sealed class MarkdownRenderer : IMarkdownRenderer
             </div>
             """;
 
-        return WrapInDocument(body);
+        return new RenderResult.Html(WrapInDocument(body));
     }
 
     private string WrapInDocument(string body) =>

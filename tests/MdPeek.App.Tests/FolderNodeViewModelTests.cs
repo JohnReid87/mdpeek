@@ -13,7 +13,7 @@ public class FolderNodeViewModelTests
     public void IsExpanded_DefaultsToFalse()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.IsExpanded.Should().BeFalse();
     }
@@ -22,7 +22,7 @@ public class FolderNodeViewModelTests
     public void IsVisible_DefaultsToTrue()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.IsVisible.Should().BeTrue();
     }
@@ -31,7 +31,7 @@ public class FolderNodeViewModelTests
     public void IsSelected_DefaultsToFalse()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.IsSelected.Should().BeFalse();
     }
@@ -42,7 +42,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(new[] { "/r/notes.md" });
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         var children = vm.Children;
 
@@ -59,7 +59,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         var first = vm.Children;
         var second = vm.Children;
@@ -71,7 +71,7 @@ public class FolderNodeViewModelTests
     public void LoadedChildren_BeforeChildrenAccessed_IsNull()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.LoadedChildren.Should().BeNull();
     }
@@ -80,7 +80,7 @@ public class FolderNodeViewModelTests
     public void LoadedChildren_BeforeChildrenAccessed_DoesNotTriggerDiskRead()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         _ = vm.LoadedChildren;
 
@@ -94,7 +94,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         var children = vm.Children;
 
@@ -107,7 +107,7 @@ public class FolderNodeViewModelTests
     public void SetExpandedRecursive_SetsIsExpandedOnSelf(bool value)
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs)) { IsExpanded = !value };
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"])) { IsExpanded = !value };
 
         vm.SetExpandedRecursive(value);
 
@@ -118,7 +118,7 @@ public class FolderNodeViewModelTests
     public void SetExpandedRecursive_DoesNotForceLoadChildren()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.SetExpandedRecursive(true);
 
@@ -134,7 +134,7 @@ public class FolderNodeViewModelTests
         fs.EnumerateDirectories("/r/a").Returns(new[] { "/r/a/b" });
         fs.EnumerateDirectories("/r/a/b").Returns(Array.Empty<string>());
         fs.EnumerateFiles(Arg.Any<string>(), "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var root = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var root = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
         var a = (FolderNodeViewModel)root.Children.Single();
         var b = (FolderNodeViewModel)a.Children.Single();
 
@@ -151,7 +151,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/a" });
         fs.EnumerateFiles(Arg.Any<string>(), "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var root = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var root = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
         _ = root.Children;
 
         root.SetExpandedRecursive(true);
@@ -163,7 +163,7 @@ public class FolderNodeViewModelTests
     public void IsLoading_DefaultsToFalse()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.IsLoading.Should().BeFalse();
     }
@@ -172,7 +172,7 @@ public class FolderNodeViewModelTests
     public void DisplayChildren_BeforeLoading_ContainsPlaceholder()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.DisplayChildren.Should().ContainSingle()
             .Which.Should().BeOfType<LoadingPlaceholderViewModel>();
@@ -182,7 +182,7 @@ public class FolderNodeViewModelTests
     public void DisplayChildren_PlaceholderDoesNotTriggerDiskRead()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         _ = vm.DisplayChildren;
 
@@ -196,7 +196,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(new[] { "/r/notes.md" });
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         await vm.LoadChildrenAsync();
 
@@ -213,7 +213,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
         var observed = new List<bool>();
         vm.PropertyChanged += (_, e) =>
         {
@@ -235,7 +235,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         await vm.LoadChildrenAsync();
 
@@ -249,7 +249,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         await vm.LoadChildrenAsync();
         await vm.LoadChildrenAsync();
@@ -263,7 +263,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.IsExpanded = true;
         // Drain the load that OnIsExpandedChanged kicked off.
@@ -278,7 +278,7 @@ public class FolderNodeViewModelTests
     public void IsExpanded_FalseToFalse_DoesNotTriggerLoad()
     {
         var fs = Substitute.For<IFileSystem>();
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         vm.IsExpanded = false;
 
@@ -292,7 +292,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(Array.Empty<string>());
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         await vm.LoadChildrenAsync();
         vm.IsExpanded = true;
@@ -306,7 +306,7 @@ public class FolderNodeViewModelTests
         var fs = Substitute.For<IFileSystem>();
         fs.EnumerateDirectories("/r").Returns(new[] { "/r/sub" });
         fs.EnumerateFiles("/r", "*.md", SearchOption.TopDirectoryOnly).Returns(Array.Empty<string>());
-        var vm = new FolderNodeViewModel(new FolderNode("/r", fs));
+        var vm = new FolderNodeViewModel(new FolderNode("/r", fs, ["*.md"]));
 
         _ = vm.Children;
 

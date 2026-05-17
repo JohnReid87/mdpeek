@@ -35,7 +35,9 @@ public partial class App : Application
     private static void ConfigureServices(IServiceCollection services, StartupOptions startupOptions)
     {
         services.AddSingleton<IFileSystem, FileSystem>();
-        services.AddSingleton<IMarkdownRenderer, MarkdownRenderer>();
+        services.AddSingleton<IDocumentRenderer, MarkdownRenderer>();
+        services.AddSingleton<IDocumentRendererFactory>(sp =>
+            new DocumentRendererFactory(sp.GetServices<IDocumentRenderer>()));
         services.AddSingleton<IFolderPicker, WpfFolderPicker>();
         services.AddSingleton<IUserConfirmation, WpfUserConfirmation>();
         services.AddSingleton<IUserNotification, WpfUserNotification>();

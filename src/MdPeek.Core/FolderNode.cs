@@ -2,20 +2,21 @@ namespace MdPeek.Core;
 
 /// <summary>
 /// A directory in the tree. Children are loaded lazily on first access:
-/// all immediate subfolders and immediate <c>.md</c> files, sorted
-/// folders-first then alphabetical (case-insensitive).
+/// all immediate subfolders and immediate document files matching the
+/// registered search patterns, sorted folders-first then alphabetical
+/// (case-insensitive).
 /// </summary>
 public sealed class FolderNode : DirectoryTreeNode
 {
-    private const string MarkdownSearchPattern = "*.md";
-
     private readonly IFileSystem _fileSystem;
+    private readonly IReadOnlyList<string> _searchPatterns;
     private IReadOnlyList<DirectoryTreeNode>? _children;
 
-    public FolderNode(string fullPath, IFileSystem fileSystem)
+    public FolderNode(string fullPath, IFileSystem fileSystem, IReadOnlyList<string> searchPatterns)
         : base(GetFolderDisplayName(fullPath), fullPath)
     {
         _fileSystem = fileSystem;
+        _searchPatterns = searchPatterns;
     }
 
     /// <summary>
@@ -35,11 +36,13 @@ public sealed class FolderNode : DirectoryTreeNode
     private IReadOnlyList<DirectoryTreeNode> LoadChildren()
     {
         var folders = _fileSystem.EnumerateDirectories(FullPath)
-            .Select(path => new FolderNode(path, _fileSystem))
+            .Select(path => new FolderNode(path, _fileSystem, _searchPatterns))
             .OrderBy(node => node.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Cast<DirectoryTreeNode>();
 
-        var files = _fileSystem.EnumerateFiles(FullPath, MarkdownSearchPattern, SearchOption.TopDirectoryOnly)
+        var files = _searchPatterns
+            .SelectMany(pattern => _fileSystem.EnumerateFiles(FullPath, pattern, SearchOption.TopDirectoryOnly))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(path => new MarkdownFileNode(path))
             .OrderBy(node => node.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Cast<DirectoryTreeNode>();

@@ -18,7 +18,7 @@ public partial class MainWindowViewModel : ObservableObject
 
     private readonly IFolderPicker _folderPicker;
     private readonly IFileSystem _fileSystem;
-    private readonly IMarkdownRenderer _markdownRenderer;
+    private readonly IDocumentRendererFactory _rendererFactory;
     private readonly IUserConfirmation _userConfirmation;
     private readonly IUserNotification _userNotification;
     private readonly IFileAssociationRegistrar _fileAssociationRegistrar;
@@ -70,7 +70,7 @@ public partial class MainWindowViewModel : ObservableObject
     private DirectoryTreeNodeViewModel? _selectedNode;
 
     [ObservableProperty]
-    private string? _htmlContent;
+    private RenderResult? _renderContent;
 
     [ObservableProperty]
     private bool _isLoadingFile;
@@ -84,14 +84,14 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         IFolderPicker folderPicker,
         IFileSystem fileSystem,
-        IMarkdownRenderer markdownRenderer,
+        IDocumentRendererFactory rendererFactory,
         IUserConfirmation userConfirmation,
         IUserNotification userNotification,
         IFileAssociationRegistrar fileAssociationRegistrar)
     {
         _folderPicker = folderPicker;
         _fileSystem = fileSystem;
-        _markdownRenderer = markdownRenderer;
+        _rendererFactory = rendererFactory;
         _userConfirmation = userConfirmation;
         _userNotification = userNotification;
         _fileAssociationRegistrar = fileAssociationRegistrar;
@@ -156,7 +156,10 @@ public partial class MainWindowViewModel : ObservableObject
 
     partial void OnIsDarkThemeChanged(bool value)
     {
-        _markdownRenderer.IsDarkTheme = value;
+        foreach (var renderer in _rendererFactory.All)
+        {
+            renderer.IsDarkTheme = value;
+        }
 
         // Re-render the open file so the theme switch is visible immediately
         // without the user having to re-select it. Pass recordHistory: false
@@ -333,10 +336,15 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             var path = file.FullPath;
+            var renderer = _rendererFactory.TryGet(Path.GetExtension(path));
+            if (renderer is null)
+            {
+                return;
+            }
 
             if (!_fileSystem.FileExists(path))
             {
-                HtmlContent = _markdownRenderer.RenderError(
+                RenderContent = renderer.RenderError(
                     "File not found",
                     $"The file '{path}' could not be found. It may have been moved, renamed, or deleted since the folder was opened.");
                 RecordHistoryVisit(recordHistory, path);
@@ -350,7 +358,7 @@ public partial class MainWindowViewModel : ObservableObject
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                HtmlContent = _markdownRenderer.RenderError(
+                RenderContent = renderer.RenderError(
                     "Could not read file",
                     $"The file '{path}' could not be opened: {ex.Message}");
                 RecordHistoryVisit(recordHistory, path);
@@ -362,7 +370,7 @@ public partial class MainWindowViewModel : ObservableObject
                 var sizeMb = size / (double)(1024 * 1024);
                 var confirmed = _userConfirmation.Confirm(
                     "Large file",
-                    $"'{file.DisplayName}' is {sizeMb:F1} MB. Rendering large markdown documents can be slow. Continue?");
+                    $"'{file.DisplayName}' is {sizeMb:F1} MB. Rendering large documents can be slow. Continue?");
 
                 if (!confirmed)
                 {
@@ -370,10 +378,10 @@ public partial class MainWindowViewModel : ObservableObject
                 }
             }
 
-            string text;
+            RenderResult result;
             try
             {
-                text = await _fileSystem.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(true);
+                result = await renderer.RenderAsync(path, cancellationToken).ConfigureAwait(true);
             }
             catch (OperationCanceledException)
             {
@@ -385,25 +393,10 @@ public partial class MainWindowViewModel : ObservableObject
                 {
                     return;
                 }
-                HtmlContent = _markdownRenderer.RenderError(
+                RenderContent = renderer.RenderError(
                     "Could not read file",
                     $"The file '{path}' could not be opened: {ex.Message}");
                 RecordHistoryVisit(recordHistory, path);
-                return;
-            }
-
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-
-            string html;
-            try
-            {
-                html = await _markdownRenderer.RenderAsync(text, cancellationToken).ConfigureAwait(true);
-            }
-            catch (OperationCanceledException)
-            {
                 return;
             }
             catch (Exception ex)
@@ -412,9 +405,9 @@ public partial class MainWindowViewModel : ObservableObject
                 {
                     return;
                 }
-                HtmlContent = _markdownRenderer.RenderError(
-                    "Could not render markdown",
-                    $"The file '{path}' could not be rendered as markdown: {ex.Message}");
+                RenderContent = renderer.RenderError(
+                    "Could not render document",
+                    $"The file '{path}' could not be rendered: {ex.Message}");
                 RecordHistoryVisit(recordHistory, path);
                 return;
             }
@@ -424,7 +417,7 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
-            HtmlContent = html;
+            RenderContent = result;
             RecordHistoryVisit(recordHistory, path);
         }
         finally
@@ -594,11 +587,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     /// <summary>
     /// Opens the tree at <paramref name="path"/>: if it is a directory, that
-    /// directory becomes the root; if it is a <c>.md</c> file, its parent
-    /// becomes the root and the file is pre-selected so it renders
+    /// directory becomes the root; if it is a supported document file, its
+    /// parent becomes the root and the file is pre-selected so it renders
     /// immediately. Returns <c>false</c> for anything else (missing path,
-    /// non-markdown file, file in an inaccessible directory) so callers can
-    /// fall back to other startup behaviour.
+    /// unsupported extension, file in an inaccessible directory) so callers
+    /// can fall back to other startup behaviour.
     /// </summary>
     public bool TryOpenFromPath(string? path)
     {
@@ -619,7 +612,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         if (!_fileSystem.FileExists(path) ||
-            !path.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+            _rendererFactory.TryGet(Path.GetExtension(path)) is null)
         {
             return false;
         }
@@ -694,7 +687,10 @@ public partial class MainWindowViewModel : ObservableObject
     private FolderNodeViewModel CreateRoot(string fullPath)
     {
         _fileIndex.Clear();
-        return new FolderNodeViewModel(new FolderNode(fullPath, _fileSystem), RegisterFileInIndex);
+        var patterns = _rendererFactory.SupportedExtensions
+            .Select(ext => $"*{ext}")
+            .ToList();
+        return new FolderNodeViewModel(new FolderNode(fullPath, _fileSystem, patterns), RegisterFileInIndex);
     }
 
     private void RegisterFileInIndex(MarkdownFileNodeViewModel file) =>
@@ -826,7 +822,7 @@ public partial class MainWindowViewModel : ObservableObject
             OnHistoryChanged();
             RootNode = null;
             SelectedNode = null;
-            HtmlContent = null;
+            RenderContent = null;
             WindowTitle = AppName;
             return;
         }
@@ -848,7 +844,7 @@ public partial class MainWindowViewModel : ObservableObject
         else
         {
             SelectedNode = null;
-            HtmlContent = null;
+            RenderContent = null;
         }
     }
 

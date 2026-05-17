@@ -1,8 +1,10 @@
 using System.Text.Json;
 
 using MdPeek.App;
+using MdPeek.Core;
 
 using FluentAssertions;
+using NSubstitute;
 
 namespace MdPeek.App.Tests;
 
@@ -28,7 +30,9 @@ public class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Load_WhenFileMissing_ReturnsDefaults()
     {
-        var sut = new JsonSettingsStore(_filePath);
+        var fs = Substitute.For<IFileSystem>();
+        fs.FileExists(_filePath).Returns(false);
+        var sut = new JsonSettingsStore(_filePath, fs);
 
         var result = sut.Load();
 
@@ -41,9 +45,11 @@ public class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Load_WhenFileMalformed_ReturnsDefaults()
     {
-        Directory.CreateDirectory(_tempDir);
-        File.WriteAllText(_filePath, "{ this is not valid json");
-        var sut = new JsonSettingsStore(_filePath);
+        var fs = Substitute.For<IFileSystem>();
+        fs.FileExists(_filePath).Returns(true);
+        fs.ReadAllTextAsync(_filePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult("{ this is not valid json"));
+        var sut = new JsonSettingsStore(_filePath, fs);
 
         var result = sut.Load();
 
@@ -54,13 +60,12 @@ public class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Load_WhenSchemaVersionMismatch_ReturnsDefaults()
     {
-        Directory.CreateDirectory(_tempDir);
-        File.WriteAllText(_filePath, JsonSerializer.Serialize(new AppSettings
-        {
-            SchemaVersion = 999,
-            LastFolder = "C:\\notes",
-        }));
-        var sut = new JsonSettingsStore(_filePath);
+        var json = JsonSerializer.Serialize(new AppSettings { SchemaVersion = 999, LastFolder = "C:\\notes" });
+        var fs = Substitute.For<IFileSystem>();
+        fs.FileExists(_filePath).Returns(true);
+        fs.ReadAllTextAsync(_filePath, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(json));
+        var sut = new JsonSettingsStore(_filePath, fs);
 
         var result = sut.Load();
 
@@ -71,7 +76,7 @@ public class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Save_ThenLoad_RoundTripsAllFields()
     {
-        var sut = new JsonSettingsStore(_filePath);
+        var sut = new JsonSettingsStore(_filePath, new FileSystem());
         var original = new AppSettings
         {
             LastFolder = "C:\\notes",
@@ -102,7 +107,7 @@ public class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void Save_CreatesDirectoryIfMissing()
     {
-        var sut = new JsonSettingsStore(_filePath);
+        var sut = new JsonSettingsStore(_filePath, new FileSystem());
 
         sut.Save(new AppSettings { LastFolder = "C:\\notes" });
 

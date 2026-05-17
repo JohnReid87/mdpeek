@@ -40,7 +40,8 @@ public partial class App : Application
         services.AddSingleton<IUserConfirmation, WpfUserConfirmation>();
         services.AddSingleton<IUserNotification, WpfUserNotification>();
         services.AddSingleton<IFileAssociationRegistrar, WindowsFileAssociationRegistrar>();
-        services.AddSingleton<ISettingsStore>(_ => new JsonSettingsStore(GetSettingsFilePath()));
+        services.AddSingleton<ISettingsStore>(sp =>
+            new JsonSettingsStore(GetSettingsFilePath(), sp.GetRequiredService<IFileSystem>()));
         services.AddSingleton(startupOptions);
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();

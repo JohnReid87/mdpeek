@@ -22,4 +22,8 @@ public sealed class FileSystem : IFileSystem
     /// <inheritdoc />
     public Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken) =>
         File.ReadAllTextAsync(path, cancellationToken);
+
+    /// <inheritdoc />
+    public Task WriteAllTextAsync(string path, string contents, CancellationToken cancellationToken) =>
+        File.WriteAllTextAsync(path, contents, cancellationToken);
 }

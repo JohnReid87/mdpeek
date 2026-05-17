@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Text.Json;
 
+using MdPeek.Core;
+
 namespace MdPeek.App;
 
 public sealed class JsonSettingsStore : ISettingsStore
@@ -11,10 +13,12 @@ public sealed class JsonSettingsStore : ISettingsStore
     };
 
     private readonly string _filePath;
+    private readonly IFileSystem _fs;
 
-    public JsonSettingsStore(string filePath)
+    public JsonSettingsStore(string filePath, IFileSystem fileSystem)
     {
         _filePath = filePath;
+        _fs = fileSystem;
     }
 
     /// <inheritdoc />
@@ -22,12 +26,13 @@ public sealed class JsonSettingsStore : ISettingsStore
     {
         try
         {
-            if (!File.Exists(_filePath))
+            if (!_fs.FileExists(_filePath))
             {
                 return new AppSettings();
             }
 
-            var json = File.ReadAllText(_filePath);
+            var json = _fs.ReadAllTextAsync(_filePath, CancellationToken.None)
+                .GetAwaiter().GetResult();
             var settings = JsonSerializer.Deserialize<AppSettings>(json, SerializerOptions);
 
             if (settings is null || settings.SchemaVersion != AppSettings.CurrentSchemaVersion)
@@ -56,7 +61,8 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
 
             var json = JsonSerializer.Serialize(settings, SerializerOptions);
-            File.WriteAllText(_filePath, json);
+            _fs.WriteAllTextAsync(_filePath, json, CancellationToken.None)
+                .GetAwaiter().GetResult();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

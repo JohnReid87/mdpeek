@@ -35,4 +35,11 @@ public interface IFileSystem
     /// <paramref name="cancellationToken"/> for cooperative cancellation.
     /// </summary>
     Task<string> ReadAllTextAsync(string path, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Writes <paramref name="contents"/> to the file at <paramref name="path"/>
+    /// on a background thread, observing
+    /// <paramref name="cancellationToken"/> for cooperative cancellation.
+    /// </summary>
+    Task WriteAllTextAsync(string path, string contents, CancellationToken cancellationToken);
 }

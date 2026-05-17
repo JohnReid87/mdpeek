@@ -1,4 +1,4 @@
-using MdPeek.App;
+﻿using MdPeek.App;
 using MdPeek.Core;
 
 using FluentAssertions;
@@ -49,7 +49,7 @@ public class FolderNodeViewModelTests
         children.Should().HaveCount(2);
         children[0].Should().BeOfType<FolderNodeViewModel>();
         children[0].FullPath.Should().Be("/r/sub");
-        children[1].Should().BeOfType<MarkdownFileNodeViewModel>();
+        children[1].Should().BeOfType<DocumentFileNodeViewModel>();
         children[1].FullPath.Should().Be("/r/notes.md");
     }
 
@@ -203,7 +203,7 @@ public class FolderNodeViewModelTests
         vm.DisplayChildren.Should().HaveCount(2);
         vm.DisplayChildren[0].Should().BeOfType<FolderNodeViewModel>();
         vm.DisplayChildren[0].FullPath.Should().Be("/r/sub");
-        vm.DisplayChildren[1].Should().BeOfType<MarkdownFileNodeViewModel>();
+        vm.DisplayChildren[1].Should().BeOfType<DocumentFileNodeViewModel>();
         vm.DisplayChildren[1].FullPath.Should().Be("/r/notes.md");
     }
 

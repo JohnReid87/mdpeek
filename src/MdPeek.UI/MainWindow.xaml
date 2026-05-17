@@ -62,7 +62,7 @@
                        VerticalAlignment="Center" />
         </DataTemplate>
 
-        <DataTemplate DataType="{x:Type app:MarkdownFileNodeViewModel}">
+        <DataTemplate DataType="{x:Type app:DocumentFileNodeViewModel}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                            Foreground="{DynamicResource Brush.Fg}"

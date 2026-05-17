@@ -1,4 +1,4 @@
-namespace MdPeek.Core;
+﻿namespace MdPeek.Core;
 
 /// <summary>
 /// A directory in the tree. Children are loaded lazily on first access:
@@ -43,7 +43,7 @@ public sealed class FolderNode : DirectoryTreeNode
         var files = _searchPatterns
             .SelectMany(pattern => _fileSystem.EnumerateFiles(FullPath, pattern, SearchOption.TopDirectoryOnly))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(path => new MarkdownFileNode(path))
+            .Select(path => new DocumentFileNode(path))
             .OrderBy(node => node.DisplayName, StringComparer.OrdinalIgnoreCase)
             .Cast<DirectoryTreeNode>();
 

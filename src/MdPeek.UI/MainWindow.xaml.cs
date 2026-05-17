@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
@@ -195,7 +195,7 @@ public partial class MainWindow : Window
 
             e.Cancel = true;
 
-            var currentPath = (_viewModel.SelectedNode as MarkdownFileNodeViewModel)?.FullPath;
+            var currentPath = (_viewModel.SelectedNode as DocumentFileNodeViewModel)?.FullPath;
             if (!string.IsNullOrEmpty(uri.Fragment) &&
                 string.Equals(localPath, currentPath, StringComparison.OrdinalIgnoreCase))
             {
@@ -272,7 +272,7 @@ public partial class MainWindow : Window
 
                 // Inject a base URL so relative links and same-page #anchors resolve
                 // to the current file's path rather than about:blank.
-                if (_viewModel.SelectedNode is MarkdownFileNodeViewModel file)
+                if (_viewModel.SelectedNode is DocumentFileNodeViewModel file)
                 {
                     var fileUri = new Uri(file.FullPath).AbsoluteUri;
                     html = html.Replace("<head>", $"<head>\n<base href=\"{fileUri}\">", StringComparison.Ordinal);

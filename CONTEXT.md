@@ -26,13 +26,13 @@ Core interactions: pick a root folder, navigate the directory tree, view rendere
 Single Visual Studio solution `MdPeek.slnx` (the newer XML solution format), layered with one-way dependencies:
 
 - **`MdPeek.Core`** — pure C# class library, no UI references. Contains pure data types and service abstractions only:
-  - `DirectoryTreeNode` (abstract), `FolderNode`, `MarkdownFileNode` — POCOs representing the file-system tree. `FolderNode` lazily enumerates children via `IFileSystem` and caches them in memory.
+  - `DirectoryTreeNode` (abstract), `FolderNode`, `DocumentFileNode` — POCOs representing the file-system tree. `FolderNode` lazily enumerates children via `IFileSystem` and caches them in memory.
   - `IFileSystem` / `FileSystem` — file-system abstraction (`EnumerateDirectories`, `EnumerateFiles`, `ReadAllTextAsync`, etc.).
   - `IMarkdownRenderer` / `MarkdownRenderer` — wraps Markdig; `RenderAsync` offloads to a background thread.
 - **`MdPeek.App`** — application layer / view-models. No XAML or WPF types — only `System.ComponentModel`, so view-models stay testable. References `Core`.
-  - **Tree-wrapper VMs:** `DirectoryTreeNodeViewModel` (abstract), `FolderNodeViewModel`, `MarkdownFileNodeViewModel`, `LoadingPlaceholderViewModel`. Each wraps the corresponding Core node and adds observable UI state (`IsSelected`, `IsVisible`, `IsExpanded`, `IsLoading`).
+  - **Tree-wrapper VMs:** `DirectoryTreeNodeViewModel` (abstract), `FolderNodeViewModel`, `DocumentFileNodeViewModel`, `LoadingPlaceholderViewModel`. Each wraps the corresponding Core node and adds observable UI state (`IsSelected`, `IsVisible`, `IsExpanded`, `IsLoading`).
   - **Async lazy loading:** expanding a `FolderNodeViewModel` for the first time fires `LoadChildrenAsync()`, which enumerates and wraps children on a background thread (`Task.Run`), marshals back to the UI thread, then replaces the loading placeholder with real children.
-  - **File-path lookup index:** `MainWindowViewModel` owns a `Dictionary<string, MarkdownFileNodeViewModel>` keyed by full path (case-insensitive). `FolderNodeViewModel` registers each file wrapper into the index as folders are loaded. Navigation commands (Back, Forward, open-by-path) resolve wrappers via the index so TreeView selection stays in sync with the rendered file.
+  - **File-path lookup index:** `MainWindowViewModel` owns a `Dictionary<string, DocumentFileNodeViewModel>` keyed by full path (case-insensitive). `FolderNodeViewModel` registers each file wrapper into the index as folders are loaded. Navigation commands (Back, Forward, open-by-path) resolve wrappers via the index so TreeView selection stays in sync with the rendered file.
   - `MainWindowViewModel` — primary VM; owns the file index, navigation history, search/filter, and file loading with cancellation.
   - `NavigationHistory`, `AppSettings`, and service interfaces (`IFolderPicker`, `ISettingsStore`, `IUserConfirmation`, `IUserNotification`, `IFileAssociationRegistrar`).
 - **`MdPeek.UI`** — WPF executable. XAML views, WebView2 hosting, file dialogs, app startup / DI wiring. The only project that knows about WPF. References `App` and `Core`.

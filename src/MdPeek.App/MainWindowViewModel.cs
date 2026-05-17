@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using MdPeek.Core;
@@ -25,7 +25,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly NavigationHistory _history = new();
     /// <summary>
     /// Path → wrapper index for resolving an existing
-    /// <see cref="MarkdownFileNodeViewModel"/> from the live tree when
+    /// <see cref="DocumentFileNodeViewModel"/> from the live tree when
     /// Back/Forward/<see cref="TryOpenFromPath"/> or settings restore need to
     /// re-select a file by path. Without this index those paths would have to
     /// allocate a stranger wrapper that is disconnected from the tree, so the
@@ -33,7 +33,7 @@ public partial class MainWindowViewModel : ObservableObject
     /// <see cref="FolderNodeViewModel"/> as folder children are loaded;
     /// cleared whenever the tree is re-rooted.
     /// </summary>
-    private readonly Dictionary<string, MarkdownFileNodeViewModel> _fileIndex =
+    private readonly Dictionary<string, DocumentFileNodeViewModel> _fileIndex =
         new(StringComparer.OrdinalIgnoreCase);
     private bool _navigatingHistory;
 
@@ -131,7 +131,7 @@ public partial class MainWindowViewModel : ObservableObject
             newValue.IsSelected = true;
         }
 
-        if (newValue is MarkdownFileNodeViewModel file)
+        if (newValue is DocumentFileNodeViewModel file)
         {
             _loadCts?.Cancel();
             _loadCts = new CancellationTokenSource();
@@ -164,7 +164,7 @@ public partial class MainWindowViewModel : ObservableObject
         // Re-render the open file so the theme switch is visible immediately
         // without the user having to re-select it. Pass recordHistory: false
         // so the theme change does not pollute the navigation stack.
-        if (SelectedNode is MarkdownFileNodeViewModel file)
+        if (SelectedNode is DocumentFileNodeViewModel file)
         {
             _loadCts?.Cancel();
             _loadCts = new CancellationTokenSource();
@@ -331,7 +331,7 @@ public partial class MainWindowViewModel : ObservableObject
         GoForwardCommand.NotifyCanExecuteChanged();
     }
 
-    private async Task LoadFileAsync(MarkdownFileNode file, bool recordHistory, CancellationToken cancellationToken)
+    private async Task LoadFileAsync(DocumentFileNode file, bool recordHistory, CancellationToken cancellationToken)
     {
         try
         {
@@ -503,7 +503,7 @@ public partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var selectedFilePath = SelectedNode is MarkdownFileNodeViewModel file ? file.FullPath : null;
+        var selectedFilePath = SelectedNode is DocumentFileNodeViewModel file ? file.FullPath : null;
         var expandedFolders = new HashSet<string>(
             CollectExpandedFolders(RootNode),
             StringComparer.OrdinalIgnoreCase);
@@ -678,7 +678,7 @@ public partial class MainWindowViewModel : ObservableObject
     public void PopulateSettingsForSave(AppSettings settings)
     {
         settings.LastFolder = RootNode?.FullPath;
-        settings.LastSelectedFile = SelectedNode is MarkdownFileNodeViewModel file ? file.FullPath : null;
+        settings.LastSelectedFile = SelectedNode is DocumentFileNodeViewModel file ? file.FullPath : null;
         settings.ExpandedFolders = RootNode is null
             ? new List<string>()
             : CollectExpandedFolders(RootNode).ToList();
@@ -693,7 +693,7 @@ public partial class MainWindowViewModel : ObservableObject
         return new FolderNodeViewModel(new FolderNode(fullPath, _fileSystem, patterns), RegisterFileInIndex);
     }
 
-    private void RegisterFileInIndex(MarkdownFileNodeViewModel file) =>
+    private void RegisterFileInIndex(DocumentFileNodeViewModel file) =>
         _fileIndex[file.FullPath] = file;
 
     /// <summary>
@@ -707,17 +707,17 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedNode = ResolveFileViewModel(fullPath);
 
     /// <summary>
-    /// Returns the live <see cref="MarkdownFileNodeViewModel"/> the tree
+    /// Returns the live <see cref="DocumentFileNodeViewModel"/> the tree
     /// already has for <paramref name="path"/>, or a fresh wrapper if the
     /// containing folder has not been loaded yet. Used by the navigation
     /// entry points so they re-select the existing tree wrapper rather than
     /// allocating a stranger node that would not be tracked by the
     /// <c>TreeView</c>.
     /// </summary>
-    private MarkdownFileNodeViewModel ResolveFileViewModel(string path) =>
+    private DocumentFileNodeViewModel ResolveFileViewModel(string path) =>
         _fileIndex.TryGetValue(path, out var existing)
             ? existing
-            : new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+            : new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
     /// <summary>
     /// Returns the parent directory of <paramref name="path"/>, or <c>null</c>
@@ -811,7 +811,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
 
         var rootPath = RootNode.FullPath;
-        var selectedFilePath = SelectedNode is MarkdownFileNodeViewModel file ? file.FullPath : null;
+        var selectedFilePath = SelectedNode is DocumentFileNodeViewModel file ? file.FullPath : null;
         var expandedFolders = new HashSet<string>(
             CollectExpandedFolders(RootNode),
             StringComparer.OrdinalIgnoreCase);

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -20,12 +20,12 @@ public sealed partial class FolderNodeViewModel : DirectoryTreeNodeViewModel
 {
     private readonly FolderNode _folder;
     private readonly ObservableCollection<DirectoryTreeNodeViewModel> _displayChildren;
-    private readonly Action<MarkdownFileNodeViewModel>? _registerFile;
+    private readonly Action<DocumentFileNodeViewModel>? _registerFile;
     private IReadOnlyList<DirectoryTreeNodeViewModel>? _children;
     private Task? _loadTask;
     private bool _suppressAutoLoad;
 
-    public FolderNodeViewModel(FolderNode folder, Action<MarkdownFileNodeViewModel>? registerFile = null)
+    public FolderNodeViewModel(FolderNode folder, Action<DocumentFileNodeViewModel>? registerFile = null)
         : base(folder)
     {
         _folder = folder;
@@ -44,7 +44,7 @@ public sealed partial class FolderNodeViewModel : DirectoryTreeNodeViewModel
     private DirectoryTreeNodeViewModel Wrap(DirectoryTreeNode node) => node switch
     {
         FolderNode folder => new FolderNodeViewModel(folder, _registerFile),
-        MarkdownFileNode file => new MarkdownFileNodeViewModel(file),
+        DocumentFileNode file => new DocumentFileNodeViewModel(file),
         _ => throw new InvalidOperationException($"Unsupported node type '{node.GetType()}'."),
     };
 
@@ -159,7 +159,7 @@ public sealed partial class FolderNodeViewModel : DirectoryTreeNodeViewModel
         _displayChildren.Clear();
         foreach (var child in wrapped)
         {
-            if (child is MarkdownFileNodeViewModel file)
+            if (child is DocumentFileNodeViewModel file)
             {
                 _registerFile?.Invoke(file);
             }

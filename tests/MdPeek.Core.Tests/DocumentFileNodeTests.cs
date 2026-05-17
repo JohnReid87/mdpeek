@@ -1,10 +1,10 @@
-using MdPeek.Core;
+﻿using MdPeek.Core;
 
 using FluentAssertions;
 
 namespace MdPeek.Core.Tests;
 
-public class MarkdownFileNodeTests
+public class DocumentFileNodeTests
 {
     [Theory]
     [InlineData("C:\\root\\notes.md", "notes.md")]
@@ -13,7 +13,7 @@ public class MarkdownFileNodeTests
     [InlineData("/root/some.file.md", "some.file.md")]
     public void DisplayName_IsFileNameIncludingExtension(string fullPath, string expected)
     {
-        var node = new MarkdownFileNode(fullPath);
+        var node = new DocumentFileNode(fullPath);
 
         node.DisplayName.Should().Be(expected);
     }
@@ -23,7 +23,7 @@ public class MarkdownFileNodeTests
     {
         const string path = "C:\\docs\\notes.md";
 
-        var node = new MarkdownFileNode(path);
+        var node = new DocumentFileNode(path);
 
         node.FullPath.Should().Be(path);
     }

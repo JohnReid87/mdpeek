@@ -1,19 +1,19 @@
-using MdPeek.Core;
+﻿using MdPeek.Core;
 
 namespace MdPeek.App;
 
 /// <summary>
-/// View-model for a <see cref="MarkdownFileNode"/>. Adds no UI state beyond
+/// View-model for a <see cref="DocumentFileNode"/>. Adds no UI state beyond
 /// the <see cref="DirectoryTreeNodeViewModel.IsVisible"/> from the base — the
 /// type is its own marker so the selection-changed logic can pattern-match
 /// for file selections.
 /// </summary>
-public sealed class MarkdownFileNodeViewModel : DirectoryTreeNodeViewModel
+public sealed class DocumentFileNodeViewModel : DirectoryTreeNodeViewModel
 {
-    public MarkdownFileNodeViewModel(MarkdownFileNode file)
+    public DocumentFileNodeViewModel(DocumentFileNode file)
         : base(file)
     {
     }
 
-    public MarkdownFileNode File => (MarkdownFileNode)Node;
+    public DocumentFileNode File => (DocumentFileNode)Node;
 }

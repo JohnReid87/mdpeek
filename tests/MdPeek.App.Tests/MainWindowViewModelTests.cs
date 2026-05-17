@@ -1,4 +1,4 @@
-using MdPeek.App;
+﻿using MdPeek.App;
 using MdPeek.Core;
 
 using FluentAssertions;
@@ -145,7 +145,7 @@ public class MainWindowViewModelTests
             .Returns(Task.FromResult<RenderResult>(new RenderResult.Html("<html>ok</html>")));
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer));
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>ok</html>"));
     }
@@ -176,7 +176,7 @@ public class MainWindowViewModelTests
         renderer.RenderError("File not found", Arg.Any<string>()).Returns(new RenderResult.Html("<html>missing</html>"));
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer));
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>missing</html>"));
     }
@@ -195,7 +195,7 @@ public class MainWindowViewModelTests
         renderer.RenderError("Could not read file", Arg.Any<string>()).Returns(new RenderResult.Html("<html>ioerr</html>"));
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer));
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>ioerr</html>"));
     }
@@ -214,7 +214,7 @@ public class MainWindowViewModelTests
         renderer.RenderError("Could not render document", Arg.Any<string>()).Returns(new RenderResult.Html("<html>parseerr</html>"));
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer));
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>parseerr</html>"));
     }
@@ -234,7 +234,7 @@ public class MainWindowViewModelTests
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(true);
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer), confirmation: confirmation);
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>big</html>"));
         confirmation.Received(1).Confirm(Arg.Any<string>(), Arg.Any<string>());
@@ -253,7 +253,7 @@ public class MainWindowViewModelTests
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer), confirmation: confirmation);
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.RenderContent.Should().BeNull();
         renderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, Arg.Any<CancellationToken>());
@@ -265,7 +265,7 @@ public class MainWindowViewModelTests
         const string path = "C:\\notes\\a.md";
         var fs = CreateRenderingFileSystem(path);
         var vm = CreateViewModel(fs: fs);
-        var file = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        var file = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.SelectedNode = file;
 
@@ -279,8 +279,8 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var vm = CreateViewModel(fs: fs);
-        var first = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        var second = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        var first = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        var second = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.SelectedNode = first;
 
         vm.SelectedNode = second;
@@ -295,7 +295,7 @@ public class MainWindowViewModelTests
         const string path = "C:\\notes\\a.md";
         var fs = CreateRenderingFileSystem(path);
         var vm = CreateViewModel(fs: fs);
-        var file = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        var file = new DocumentFileNodeViewModel(new DocumentFileNode(path));
         vm.SelectedNode = file;
 
         vm.SelectedNode = null;
@@ -310,8 +310,8 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var vm = CreateViewModel(fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        var bNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        var bNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.SelectedNode = bNode;
 
         vm.GoBackCommand.Execute(null);
@@ -398,7 +398,7 @@ public class MainWindowViewModelTests
             LastSelectedFile = file,
         });
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<DocumentFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>restored</html>"));
     }
 
@@ -620,7 +620,7 @@ public class MainWindowViewModelTests
 
         vm.RefreshCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<DocumentFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>v2</html>"));
     }
 
@@ -699,7 +699,7 @@ public class MainWindowViewModelTests
 
         opened.Should().BeTrue();
         vm.RootNode!.FullPath.Should().Be(folder);
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<DocumentFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>arg</html>"));
     }
 
@@ -794,7 +794,7 @@ public class MainWindowViewModelTests
         var confirmation = Substitute.For<IUserConfirmation>();
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer), confirmation: confirmation);
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>edge</html>"));
         confirmation.DidNotReceiveWithAnyArgs().Confirm(default!, default!);
@@ -881,7 +881,7 @@ public class MainWindowViewModelTests
         var fs = CreateRenderingFileSystem(path);
         var vm = CreateViewModel(fs: fs);
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(path));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(path));
 
         vm.CanGoBack.Should().BeFalse();
         vm.CanGoForward.Should().BeFalse();
@@ -895,8 +895,8 @@ public class MainWindowViewModelTests
         var fs = CreateRenderingFileSystem(a, b);
         var vm = CreateViewModel(fs: fs);
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
 
         vm.CanGoBack.Should().BeTrue();
         vm.CanGoForward.Should().BeFalse();
@@ -909,12 +909,12 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var vm = CreateViewModel(fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
 
         vm.GoBackCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(a);
+        vm.SelectedNode.Should().BeOfType<DocumentFileNodeViewModel>().Which.FullPath.Should().Be(a);
         vm.CanGoBack.Should().BeFalse();
         vm.CanGoForward.Should().BeTrue();
     }
@@ -926,13 +926,13 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var vm = CreateViewModel(fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.GoBackCommand.Execute(null);
 
         vm.GoForwardCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(b);
+        vm.SelectedNode.Should().BeOfType<DocumentFileNodeViewModel>().Which.FullPath.Should().Be(b);
         vm.CanGoBack.Should().BeTrue();
         vm.CanGoForward.Should().BeFalse();
     }
@@ -945,12 +945,12 @@ public class MainWindowViewModelTests
         const string c = "C:\\notes\\c.md";
         var fs = CreateRenderingFileSystem(a, b, c);
         var vm = CreateViewModel(fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.GoBackCommand.Execute(null);
         vm.CanGoForward.Should().BeTrue();
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(c));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(c));
 
         vm.CanGoForward.Should().BeFalse();
         vm.CanGoBack.Should().BeTrue();
@@ -963,13 +963,13 @@ public class MainWindowViewModelTests
         const string b = "C:\\notes\\b.md";
         var fs = CreateRenderingFileSystem(a, b);
         var vm = CreateViewModel(fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
 
         vm.GoBackCommand.Execute(null);
         vm.GoForwardCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(b);
+        vm.SelectedNode.Should().BeOfType<DocumentFileNodeViewModel>().Which.FullPath.Should().Be(b);
         vm.CanGoForward.Should().BeFalse();
     }
 
@@ -986,9 +986,9 @@ public class MainWindowViewModelTests
         var confirmation = Substitute.For<IUserConfirmation>();
         confirmation.Confirm(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
         var vm = CreateViewModel(fs: fs, confirmation: confirmation);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(big));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(big));
 
         vm.CanGoBack.Should().BeFalse();
     }
@@ -1002,8 +1002,8 @@ public class MainWindowViewModelTests
         var picker = Substitute.For<IFolderPicker>();
         picker.PickFolder().Returns("C:\\other");
         var vm = CreateViewModel(picker: picker, fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.CanGoBack.Should().BeTrue();
 
         vm.OpenFolderCommand.Execute(null);
@@ -1021,8 +1021,8 @@ public class MainWindowViewModelTests
         var fs = CreateRenderingFileSystem(a, b);
         fs.DirectoryExists(newFolder).Returns(true);
         var vm = CreateViewModel(fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.CanGoBack.Should().BeTrue();
 
         vm.TryOpenFromPath(newFolder);
@@ -1042,8 +1042,8 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { a, b });
         var vm = CreateViewModel(fs: fs);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.CanGoBack.Should().BeTrue();
 
         vm.RefreshCommand.Execute(null);
@@ -1063,8 +1063,8 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(folder, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { a, b });
         var vm = CreateViewModel(fs: fs);
         vm.ApplyStartupSettings(new AppSettings { LastFolder = folder });
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
 
         vm.RefreshCommand.Execute(null);
 
@@ -1081,8 +1081,8 @@ public class MainWindowViewModelTests
         var vm = CreateViewModel(fs: fs);
 
         vm.GoBackCommand.CanExecute(null).Should().BeFalse();
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.GoBackCommand.CanExecute(null).Should().BeTrue();
     }
 
@@ -1093,7 +1093,7 @@ public class MainWindowViewModelTests
         const string a = "C:\\notes\\a.md";
         var fs = CreateRenderingFileSystem(a);
         var vm = CreateViewModel(fs: fs);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
 
         vm.SelectedNode = new FolderNodeViewModel(new FolderNode(folder, fs, ["*.md"]));
 
@@ -1159,12 +1159,12 @@ public class MainWindowViewModelTests
 
         var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
         var random = vm.RootNode.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "random");
-        var notes = vm.RootNode.Children.OfType<MarkdownFileNodeViewModel>().Single(f => f.DisplayName == "notes.md");
+        var notes = vm.RootNode.Children.OfType<DocumentFileNodeViewModel>().Single(f => f.DisplayName == "notes.md");
         design.IsVisible.Should().BeTrue();
         random.IsVisible.Should().BeFalse();
         notes.IsVisible.Should().BeFalse();
-        design.Children.OfType<MarkdownFileNodeViewModel>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
-        design.Children.OfType<MarkdownFileNodeViewModel>().Single(c => c.DisplayName == "readme.md").IsVisible.Should().BeFalse();
+        design.Children.OfType<DocumentFileNodeViewModel>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
+        design.Children.OfType<DocumentFileNodeViewModel>().Single(c => c.DisplayName == "readme.md").IsVisible.Should().BeFalse();
     }
 
     [Fact]
@@ -1192,7 +1192,7 @@ public class MainWindowViewModelTests
         vm.FilterText = "ARCH";
 
         var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().First(f => f.DisplayName == "design");
-        design.Children.OfType<MarkdownFileNodeViewModel>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
+        design.Children.OfType<DocumentFileNodeViewModel>().Single(c => c.DisplayName == "architecture.md").IsVisible.Should().BeTrue();
     }
 
     [Fact]
@@ -1382,11 +1382,11 @@ public class MainWindowViewModelTests
             .Returns(Task.FromResult<RenderResult>(new RenderResult.Html("<html>readme</html>")));
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer));
         vm.TryOpenFromPath(sub);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(file));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(file));
 
         vm.GoUpCommand.Execute(null);
 
-        vm.SelectedNode.Should().BeOfType<MarkdownFileNodeViewModel>().Which.FullPath.Should().Be(file);
+        vm.SelectedNode.Should().BeOfType<DocumentFileNodeViewModel>().Which.FullPath.Should().Be(file);
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>readme</html>"));
     }
 
@@ -1407,7 +1407,7 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(sub, Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(new[] { file });
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(sub);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(file));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(file));
 
         vm.GoUpCommand.Execute(null);
 
@@ -1462,8 +1462,8 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(sub);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.CanGoBack.Should().BeTrue();
         vm.CanGoForward.Should().BeFalse();
 
@@ -1528,8 +1528,8 @@ public class MainWindowViewModelTests
         fs.EnumerateFiles(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SearchOption>()).Returns(Array.Empty<string>());
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(parent);
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(a));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(b));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(a));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(b));
         vm.CanGoBack.Should().BeTrue();
         var design = vm.RootNode!.Children.OfType<FolderNodeViewModel>().Single();
 
@@ -1763,8 +1763,8 @@ public class MainWindowViewModelTests
         vm.TryOpenFromPath(folder);
 
         var children = vm.RootNode!.Children;
-        var aWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
-        var bWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == b);
+        var aWrapper = children.OfType<DocumentFileNodeViewModel>().Single(c => c.FullPath == a);
+        var bWrapper = children.OfType<DocumentFileNodeViewModel>().Single(c => c.FullPath == b);
         vm.SelectedNode = aWrapper;
         vm.SelectedNode = bWrapper;
 
@@ -1787,8 +1787,8 @@ public class MainWindowViewModelTests
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(folder);
         var children = vm.RootNode!.Children;
-        var aWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
-        var bWrapper = children.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == b);
+        var aWrapper = children.OfType<DocumentFileNodeViewModel>().Single(c => c.FullPath == a);
+        var bWrapper = children.OfType<DocumentFileNodeViewModel>().Single(c => c.FullPath == b);
         vm.SelectedNode = aWrapper;
         vm.SelectedNode = bWrapper;
         vm.GoBackCommand.Execute(null);
@@ -1812,14 +1812,14 @@ public class MainWindowViewModelTests
         var vm = CreateViewModel(fs: fs);
         vm.TryOpenFromPath(folder);
         var firstChildren = vm.RootNode!.Children;
-        var firstAWrapper = firstChildren.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
-        var firstBWrapper = firstChildren.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == b);
+        var firstAWrapper = firstChildren.OfType<DocumentFileNodeViewModel>().Single(c => c.FullPath == a);
+        var firstBWrapper = firstChildren.OfType<DocumentFileNodeViewModel>().Single(c => c.FullPath == b);
         vm.SelectedNode = firstAWrapper;
         vm.SelectedNode = firstBWrapper;
 
         vm.RefreshCommand.Execute(null);
         var newChildren = vm.RootNode!.Children;
-        var newAWrapper = newChildren.OfType<MarkdownFileNodeViewModel>().Single(c => c.FullPath == a);
+        var newAWrapper = newChildren.OfType<DocumentFileNodeViewModel>().Single(c => c.FullPath == a);
         vm.GoBackCommand.Execute(null);
 
         vm.SelectedNode.Should().BeSameAs(newAWrapper);
@@ -1848,8 +1848,8 @@ public class MainWindowViewModelTests
 
         var vm = CreateViewModel(fs: fs, factory: CreateFactory(renderer));
 
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(slow));
-        vm.SelectedNode = new MarkdownFileNodeViewModel(new MarkdownFileNode(fast));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(slow));
+        vm.SelectedNode = new DocumentFileNodeViewModel(new DocumentFileNode(fast));
 
         vm.RenderContent.Should().Be(new RenderResult.Html("<html>fast</html>"));
 

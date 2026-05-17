@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly Dictionary<string, double> _scrollPositions = new(StringComparer.OrdinalIgnoreCase);
     private string? _renderedPath;
     private double? _pendingScrollRestore;
+    private string? _pendingAnchorFragment;
     private bool _awaitingHistoryNavigation;
 
     public MainWindow(
@@ -205,6 +206,10 @@ public partial class MainWindow : Window
             }
             else
             {
+                if (!string.IsNullOrEmpty(uri.Fragment))
+                {
+                    _pendingAnchorFragment = uri.Fragment.TrimStart('#');
+                }
                 _viewModel.NavigateToMarkdownFileByPath(localPath);
             }
         }
@@ -290,7 +295,14 @@ public partial class MainWindow : Window
 
     private async void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        if (_pendingScrollRestore is double scrollY)
+        if (_pendingAnchorFragment is string anchor)
+        {
+            _pendingAnchorFragment = null;
+            var escaped = anchor.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            await ContentView.CoreWebView2.ExecuteScriptAsync(
+                $"document.getElementById(\"{escaped}\")?.scrollIntoView({{behavior:'smooth'}});");
+        }
+        else if (_pendingScrollRestore is double scrollY)
         {
             _pendingScrollRestore = null;
             await ContentView.CoreWebView2.ExecuteScriptAsync(
